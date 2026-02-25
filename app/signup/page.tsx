@@ -21,12 +21,12 @@ export default function SignUpPage() {
         callbackUrl: "/",
       });
       if (result?.ok) {
-        setMessage("Check your email to finish signing up.");
+        setMessage("Controleer je e-mail om je registratie af te ronden.");
       } else {
-        setMessage(result?.error ?? "Something went wrong.");
+        setMessage(result?.error ?? "Er is iets misgegaan.");
       }
     } catch (err) {
-      setMessage("Failed to send email.");
+      setMessage("Verzenden van e-mail mislukt.");
     } finally {
       setLoading(false);
     }
@@ -34,13 +34,13 @@ export default function SignUpPage() {
 
   return (
     <main style={{ maxWidth: 420, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ marginBottom: 12 }}>Sign up</h1>
+      <h1 style={{ marginBottom: 12 }}>Registreren</h1>
       <p style={{ marginBottom: 12, color: "#555" }}>
-        Enter your email and we’ll send you a magic link. Your account will be
-        created on first sign-in.
+        Vul je e-mailadres in en we sturen je een inloglink. Je account wordt
+        aangemaakt bij je eerste keer inloggen.
       </p>
       <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">E-mailadres</label>
         <input
           id="email"
           name="email"
@@ -56,12 +56,12 @@ export default function SignUpPage() {
           disabled={loading}
           style={{ padding: 10, borderRadius: 6 }}
         >
-          {loading ? "Sending..." : "Send sign-up link"}
+          {loading ? "Verzenden..." : "Registratielink versturen"}
         </button>
       </form>
       <div style={{ marginTop: 12 }}>
-        <span style={{ marginRight: 8 }}>Already have an account?</span>
-        <Link href="/login">Sign in</Link>
+        <span style={{ marginRight: 8 }}>Heb je al een account?</span>
+        <Link href="/login">Inloggen</Link>
       </div>
       {message && (
         <p style={{ marginTop: 12, color: "#444" }}>{message}</p>

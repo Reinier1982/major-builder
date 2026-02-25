@@ -11,8 +11,8 @@ type User = {
 };
 
 const roles = [
-  { value: "admin", label: "Admin" },
-  { value: "builder", label: "Builder" },
+  { value: "admin", label: "Beheerder" },
+  { value: "builder", label: "Bouwer" },
 ];
 
 export default function UsersClient() {
@@ -27,11 +27,11 @@ export default function UsersClient() {
       setError(null);
       try {
         const res = await fetch("/api/users", { cache: "no-store" });
-        if (!res.ok) throw new Error(`Failed (${res.status})`);
+        if (!res.ok) throw new Error(`Mislukt (${res.status})`);
         const data = (await res.json()) as User[];
         setUsers(data);
       } catch (e: any) {
-        setError(e.message ?? "Failed to load users");
+        setError(e.message ?? "Gebruikers laden mislukt");
       } finally {
         setLoading(false);
       }
@@ -45,17 +45,17 @@ export default function UsersClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
-    if (!res.ok) throw new Error("Update failed");
+    if (!res.ok) throw new Error("Bijwerken mislukt");
     const u = (await res.json()) as User;
     setUsers((prev) => prev.map((x) => (x.id === id ? u : x)));
   }
 
-  if (loading) return <p className="text-sm text-zinc-500">Loading users…</p>;
+  if (loading) return <p className="text-sm text-zinc-500">Gebruikers laden...</p>;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
     <section className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Users</h1>
+      <h1 className="text-xl font-semibold">Gebruikers</h1>
       <ul className="flex flex-col divide-y divide-zinc-200 dark:divide-zinc-800 rounded border border-zinc-200 dark:border-zinc-800">
         {users.map((u) => (
           <li key={u.id} className="p-3 flex items-center justify-between gap-4">
@@ -65,13 +65,13 @@ export default function UsersClient() {
             </div>
             <div className="flex items-center gap-2">
               <select
-                className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent"
+                className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
                 value={u.role}
                 onChange={async (e) => {
                   try {
                     await updateUser(u.id, { role: e.target.value });
                   } catch (err: any) {
-                    setError(err.message ?? "Failed to update");
+                    setError(err.message ?? "Bijwerken mislukt");
                   }
                 }}
               >
@@ -88,4 +88,3 @@ export default function UsersClient() {
     </section>
   );
 }
-

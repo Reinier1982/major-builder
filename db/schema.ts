@@ -54,7 +54,8 @@ export const obstacles = sqliteTable("obstacles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   description: text("description"),
-  status: text("status").notNull().default("planned"), // planned | in_progress | done
+  problemDescription: text("problem_description"),
+  status: text("status").notNull().default("planned"), // planned | in_progress | problem | done
   order: integer("order"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
@@ -65,5 +66,6 @@ export const obstacleImages = sqliteTable("obstacle_images", {
   obstacleId: integer("obstacle_id").notNull(),
   url: text("url").notNull(),
   label: text("label"),
+  uploadedBy: text("uploaded_by"),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
 });

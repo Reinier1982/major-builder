@@ -91,6 +91,7 @@ export const authOptions: NextAuthOptions = {
       // Determine role from token (JWT), user (DB strategy), or DB by email
       let role: string | undefined = token ? (token as any).role : undefined;
       if (!role && user) role = (user as any).role;
+      const userId = (token?.sub as string | undefined) ?? ((user as any)?.id as string | undefined);
       if (!role && session?.user?.email) {
         try {
           const row = await db.select().from(users).where(eq(users.email, session.user.email as string)).limit(1);
@@ -99,6 +100,7 @@ export const authOptions: NextAuthOptions = {
       }
       if (session?.user) {
         (session.user as any).role = role ?? "builder";
+        (session.user as any).id = userId;
       }
       return session;
     },

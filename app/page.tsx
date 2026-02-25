@@ -1,21 +1,21 @@
-import Image from "next/image";
-import ObstaclesClient from "./obstacles/ObstaclesClient";
-import AdminMenu from "./AdminMenu";
 import { authOptions } from "../lib/auth";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import ObstaclesClient from "./obstacles/ObstaclesClient";
+import AdminMenu from "./AdminMenu";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
   if (!session) {
-    redirect("/login");
+    redirect("/signin");
   }
   return (
-    <div className="flex min-h-screen items-start justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-col gap-6 py-12 px-6 bg-white dark:bg-black">
-        <AdminMenu />
-        <h1 className="text-2xl font-semibold text-black dark:text-zinc-50">Obstacle Builder</h1>
-        <ObstaclesClient />
+    <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
+      <main className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-8">
+        <div className="flex flex-col gap-4 sm:gap-6">
+          <AdminMenu />
+          <ObstaclesClient />
+        </div>
       </main>
     </div>
   );

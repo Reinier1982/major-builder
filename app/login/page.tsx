@@ -21,12 +21,12 @@ export default function SignInPage() {
         callbackUrl: "/",
       });
       if (result?.ok) {
-        setMessage("Check your email for a sign-in link.");
+        setMessage("Controleer je e-mail voor een inloglink.");
       } else {
-        setMessage(result?.error ?? "Something went wrong.");
+        setMessage(result?.error ?? "Er is iets misgegaan.");
       }
     } catch (err) {
-      setMessage("Failed to send email.");
+      setMessage("Verzenden van e-mail mislukt.");
     } finally {
       setLoading(false);
     }
@@ -34,9 +34,9 @@ export default function SignInPage() {
 
   return (
     <main style={{ maxWidth: 420, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ marginBottom: 12 }}>Sign in</h1>
+      <h1 style={{ marginBottom: 12 }}>Inloggen</h1>
       <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label htmlFor="email">Email</label>
+        <label htmlFor="email">E-mailadres</label>
         <input
           id="email"
           name="email"
@@ -52,12 +52,12 @@ export default function SignInPage() {
           disabled={loading}
           style={{ padding: 10, borderRadius: 6 }}
         >
-          {loading ? "Sending..." : "Send magic link"}
+          {loading ? "Verzenden..." : "Inloglink versturen"}
         </button>
       </form>
       <div style={{ marginTop: 12 }}>
-        <span style={{ marginRight: 8 }}>New here?</span>
-        <Link href="/signup">Create an account</Link>
+        <span style={{ marginRight: 8 }}>Nieuw hier?</span>
+        <Link href="/signup">Account aanmaken</Link>
       </div>
       {message && (
         <p style={{ marginTop: 12, color: "#444" }}>{message}</p>
