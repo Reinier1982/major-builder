@@ -30,8 +30,9 @@ const statuses = [
 ];
 
 const statusLabelByValue = Object.fromEntries(statuses.map((s) => [s.value, s.label])) as Record<string, string>;
+type AdminFilter = "all" | "planned" | "in_progress" | "problem" | "done";
 
-export default function ObstaclesClient() {
+export default function ObstaclesClient({ initialAdminFilter = "all" }: { initialAdminFilter?: AdminFilter }) {
   const { data: session } = useSession();
   const role = (session?.user as any)?.role ?? "builder";
   const userId = (session?.user as any)?.id ?? null;
@@ -61,11 +62,15 @@ export default function ObstaclesClient() {
   const [eNewFiles, setENewFiles] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<number | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ targetId: number; position: "before" | "after" } | null>(null);
   const [reordering, setReordering] = useState(false);
-  const [adminFilter, setAdminFilter] = useState<"all" | "planned" | "in_progress" | "problem" | "done">("all");
+  const [adminFilter, setAdminFilter] = useState<AdminFilter>(initialAdminFilter);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    setAdminFilter(initialAdminFilter);
+  }, [initialAdminFilter]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -180,9 +185,8 @@ export default function ObstaclesClient() {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
-  async function onReorderByDrag(draggedId: number, targetId: number) {
+  async function onReorderByDrag(draggedId: number, targetId: number, position: "before" | "after") {
     if (role !== "admin" || reordering) return;
-    if (draggedId === targetId) return;
 
     const current = [...sorted];
     const fromIndex = current.findIndex((o) => o.id === draggedId);
@@ -190,8 +194,15 @@ export default function ObstaclesClient() {
     if (fromIndex < 0 || toIndex < 0) return;
 
     const next = [...current];
+    let insertIndex = toIndex + (position === "after" ? 1 : 0);
     const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
+    if (fromIndex < insertIndex) insertIndex -= 1;
+    if (insertIndex === fromIndex) {
+      setDraggingId(null);
+      setDropIndicator(null);
+      return;
+    }
+    next.splice(insertIndex, 0, moved);
 
     const updates = next.map((o, idx) => ({ id: o.id, order: idx + 1 }));
     const orderById = new Map(updates.map((u) => [u.id, u.order]));
@@ -219,16 +230,22 @@ export default function ObstaclesClient() {
     } finally {
       setReordering(false);
       setDraggingId(null);
-      setDropTargetId(null);
+      setDropIndicator(null);
     }
   }
 
-  function obstacleIdFromPoint(clientX: number, clientY: number): number | null {
+  function dropIndicatorFromPoint(
+    clientX: number,
+    clientY: number
+  ): { targetId: number; position: "before" | "after" } | null {
     const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
     const row = el?.closest?.("[data-obstacle-id]") as HTMLElement | null;
     if (!row) return null;
     const id = Number(row.dataset.obstacleId);
-    return Number.isFinite(id) ? id : null;
+    if (!Number.isFinite(id)) return null;
+    const rect = row.getBoundingClientRect();
+    const position = clientY < rect.top + rect.height / 2 ? "before" : "after";
+    return { targetId: id, position };
   }
 
   if (loading) return <p className="text-sm text-zinc-500">Obstacle laden...</p>;
@@ -258,7 +275,7 @@ export default function ObstaclesClient() {
         <select
           className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
           value={adminFilter}
-          onChange={(e) => setAdminFilter(e.target.value as "all" | "planned" | "in_progress" | "problem" | "done")}
+          onChange={(e) => setAdminFilter(e.target.value as AdminFilter)}
         >
           <option value="all">Alles</option>
           <option value="planned">Gepland</option>
@@ -276,20 +293,21 @@ export default function ObstaclesClient() {
           <li
             key={o.id}
             data-obstacle-id={o.id}
-            className={`p-3 flex flex-col gap-2 touch-none ${draggingId === o.id ? "opacity-60" : ""} ${dropTargetId === o.id ? "ring-2 ring-zinc-400 ring-inset" : ""}`}
-            onDragEnter={() => {
-              if (role === "admin" && draggingId !== o.id && !reordering) {
-                setDropTargetId(o.id);
-              }
-            }}
+            className={`relative p-3 flex flex-col gap-2 touch-none ${draggingId === o.id ? "opacity-60" : ""}`}
             onDragEnd={() => {
               setDraggingId(null);
-              setDropTargetId(null);
+              setDropIndicator(null);
             }}
             onDragOver={(ev) => {
               if (role === "admin" && !reordering) {
                 ev.preventDefault();
                 ev.dataTransfer.dropEffect = "move";
+                const indicator = dropIndicatorFromPoint(ev.clientX, ev.clientY);
+                if (indicator && indicator.targetId !== draggingId) {
+                  setDropIndicator(indicator);
+                } else {
+                  setDropIndicator(null);
+                }
               }
             }}
             onDrop={async (ev) => {
@@ -297,30 +315,44 @@ export default function ObstaclesClient() {
               const sourceId = Number(ev.dataTransfer.getData("text/plain"));
               const draggedId = Number.isFinite(sourceId) ? sourceId : draggingId;
               if (draggedId === null) return;
-              await onReorderByDrag(draggedId, o.id);
+              const indicator = dropIndicatorFromPoint(ev.clientX, ev.clientY);
+              if (!indicator || indicator.targetId === draggedId) {
+                setDraggingId(null);
+                setDropIndicator(null);
+                return;
+              }
+              await onReorderByDrag(draggedId, indicator.targetId, indicator.position);
             }}
             onTouchMove={(ev) => {
               if (role !== "admin" || reordering || draggingId === null) return;
               const touch = ev.touches[0];
               if (!touch) return;
-              const targetId = obstacleIdFromPoint(touch.clientX, touch.clientY);
-              if (targetId !== null && targetId !== draggingId) {
-                setDropTargetId(targetId);
+              const indicator = dropIndicatorFromPoint(touch.clientX, touch.clientY);
+              if (indicator && indicator.targetId !== draggingId) {
+                setDropIndicator(indicator);
                 ev.preventDefault();
+              } else {
+                setDropIndicator(null);
               }
             }}
             onTouchEnd={async () => {
               if (role !== "admin" || reordering || draggingId === null) return;
               const draggedId = draggingId;
-              const targetId = dropTargetId;
-              if (targetId !== null && targetId !== draggedId) {
-                await onReorderByDrag(draggedId, targetId);
+              const indicator = dropIndicator;
+              if (indicator && indicator.targetId !== draggedId) {
+                await onReorderByDrag(draggedId, indicator.targetId, indicator.position);
               } else {
                 setDraggingId(null);
-                setDropTargetId(null);
+                setDropIndicator(null);
               }
             }}
           >
+            {dropIndicator?.targetId === o.id && dropIndicator.position === "before" && (
+              <div className="pointer-events-none absolute left-3 right-3 -top-px h-1 rounded-full bg-zinc-500" />
+            )}
+            {dropIndicator?.targetId === o.id && dropIndicator.position === "after" && (
+              <div className="pointer-events-none absolute left-3 right-3 -bottom-px h-1 rounded-full bg-zinc-500" />
+            )}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-zinc-500">#{o.order ?? "-"}</span>
@@ -405,12 +437,12 @@ export default function ObstaclesClient() {
                     ev.dataTransfer.effectAllowed = "move";
                     ev.dataTransfer.setData("text/plain", String(o.id));
                     setDraggingId(o.id);
-                    setDropTargetId(null);
+                    setDropIndicator(null);
                   }}
                   onTouchStart={(ev) => {
                     if (reordering) return;
                     setDraggingId(o.id);
-                    setDropTargetId(null);
+                    setDropIndicator(null);
                     ev.preventDefault();
                   }}
                 >

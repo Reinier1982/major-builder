@@ -32,8 +32,11 @@ export default function AdminMenuClient() {
           <div className="absolute right-0 z-50 mt-2 w-44 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-2">
             <div className="px-2 pb-2 text-xs text-zinc-500">Beheer</div>
             <div className="flex flex-col">
+              <Link href="/admin" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
+                Dashboard
+              </Link>
               <Link href="/" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
-                Start
+                Obstacles
               </Link>
               <Link href="/users" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
                 Gebruikers
