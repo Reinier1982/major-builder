@@ -4,11 +4,14 @@ import { redirect } from "next/navigation";
 import ObstaclesClient from "./obstacles/ObstaclesClient";
 import AdminMenu from "./AdminMenu";
 
+type AdminFilter = "all" | "planned" | "in_progress" | "problem" | "done";
 type HomeProps = {
   searchParams?: Promise<{ status?: string }>;
 };
 
-const allowedStatuses = new Set(["planned", "in_progress", "problem", "done"]);
+function isAdminFilter(value: string | undefined): value is Exclude<AdminFilter, "all"> {
+  return value === "planned" || value === "in_progress" || value === "problem" || value === "done";
+}
 
 export default async function Home({ searchParams }: HomeProps) {
   const session = await getServerSession(authOptions);
@@ -18,8 +21,8 @@ export default async function Home({ searchParams }: HomeProps) {
 
   const params = searchParams ? await searchParams : undefined;
   const requestedStatus = params?.status;
-  const initialAdminFilter =
-    requestedStatus && allowedStatuses.has(requestedStatus) ? requestedStatus : "all";
+  const initialAdminFilter: AdminFilter =
+    isAdminFilter(requestedStatus) ? requestedStatus : "all";
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
