@@ -1,0 +1,4 @@
+[build.environment]
+  # Server-only env vars used by auth/email flows; omit from secrets scanner matching.
+  # Only key names are listed here (never values).
+  SECRETS_SCAN_OMIT_KEYS = "NEXTAUTH_SECRET,RESEND_API_KEY,EMAIL_SERVER"
