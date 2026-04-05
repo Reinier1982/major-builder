@@ -17,7 +17,7 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: "database",
   },
-  debug: true,
+  debug: process.env.NODE_ENV !== "production",
   providers: [
     EmailProvider({
       from: process.env.EMAIL_FROM,
