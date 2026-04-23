@@ -9,20 +9,28 @@ type HomeProps = {
   searchParams?: Promise<{ status?: string }>;
 };
 
-function isAdminFilter(value: string | undefined): value is Exclude<AdminFilter, "all"> {
-  return value === "planned" || value === "in_progress" || value === "problem" || value === "done";
+function isAdminFilter(
+  value: string | undefined,
+): value is Exclude<AdminFilter, "all"> {
+  return (
+    value === "planned" ||
+    value === "in_progress" ||
+    value === "problem" ||
+    value === "done"
+  );
 }
 
 export default async function Home({ searchParams }: HomeProps) {
   const session = await getServerSession(authOptions);
   if (!session) {
-    redirect("/signin");
+    redirect("/login");
   }
 
   const params = searchParams ? await searchParams : undefined;
   const requestedStatus = params?.status;
-  const initialAdminFilter: AdminFilter =
-    isAdminFilter(requestedStatus) ? requestedStatus : "all";
+  const initialAdminFilter: AdminFilter = isAdminFilter(requestedStatus)
+    ? requestedStatus
+    : "all";
 
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
