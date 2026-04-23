@@ -5,21 +5,11 @@ import db from "../../../../db";
 import { obstacles } from "../../../../db/schema";
 import { eq } from "drizzle-orm";
 
-function ensureProblemDescriptionColumn() {
-  const sqlite = (db as any).$client;
-  const cols = sqlite.prepare("PRAGMA table_info('obstacles')").all() as Array<{ name: string }>;
-  const hasColumn = cols.some((c) => c.name === "problem_description");
-  if (!hasColumn) {
-    sqlite.prepare("ALTER TABLE obstacles ADD COLUMN problem_description text").run();
-  }
-}
-
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id: idParam } = await ctx.params;
   const id = Number(idParam);
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {
-    ensureProblemDescriptionColumn();
     const rows = await db.select().from(obstacles).where(eq(obstacles.id, id)).limit(1);
     if (!rows[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(rows[0]);
@@ -33,7 +23,6 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   const id = Number(idParam);
   if (!Number.isFinite(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {
-    ensureProblemDescriptionColumn();
     const session = await getServerSession(authOptions);
     const role = (session?.user as any)?.role;
     const body = await req.json();

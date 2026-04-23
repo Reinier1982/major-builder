@@ -1,26 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../../../lib/auth";
-import path from "path";
-import { unlink } from "fs/promises";
 import db from "../../../../../../db";
 import { obstacleImages } from "../../../../../../db/schema";
 import { and, eq } from "drizzle-orm";
+import {
+  getStorageBucketName,
+  getStoragePathFromPublicUrl,
+  getSupabaseStorageClient,
+} from "../../../../../../lib/supabase-storage";
 
-async function ensureUploadedByColumn() {
-  const sqlite = (db as any).$client;
-  const cols = sqlite.prepare("PRAGMA table_info('obstacle_images')").all() as Array<{ name: string }>;
-  const hasUploadedBy = cols.some((c) => c.name === "uploaded_by");
-  if (!hasUploadedBy) {
-    sqlite.prepare("ALTER TABLE obstacle_images ADD COLUMN uploaded_by text").run();
-  }
+type SessionUser = {
+  id?: string;
+  role?: string;
+};
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string; imageId: string }> }) {
-  await ensureUploadedByColumn();
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
-  const userId = (session?.user as any)?.id as string | undefined;
+  const user = session?.user as SessionUser | undefined;
+  const role = user?.role;
+  const userId = user?.id;
   if (!session || (role !== "admin" && role !== "builder")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { id, imageId } = await ctx.params;
   const obstacleId = Number(id);
@@ -43,12 +46,13 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
       .returning();
     if (!deleted[0]) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const url = deleted[0].url as string;
-    if (url?.startsWith("/uploads/")) {
-      const p = path.join(process.cwd(), "public", url.replace(/^\/+/, ""));
-      try { await unlink(p); } catch {}
+    const storagePath = getStoragePathFromPublicUrl(url);
+    if (storagePath) {
+      const { error } = await getSupabaseStorageClient().storage.from(getStorageBucketName()).remove([storagePath]);
+      if (error) console.warn("Failed to delete Supabase Storage object:", error.message);
     }
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message ?? "Failed to delete" }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: errorMessage(err, "Failed to delete") }, { status: 500 });
   }
 }

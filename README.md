@@ -2,6 +2,31 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Required environment variables:
+
+```bash
+DATABASE_URL="postgresql://..."
+SUPABASE_SECRET_KEY="..."
+# Legacy alternative:
+# SUPABASE_SERVICE_ROLE_KEY="..."
+# Optional. Inferred from DATABASE_URL for Supabase pooler URLs if omitted.
+SUPABASE_URL="https://your-project-ref.supabase.co"
+# Optional. Defaults to obstacle-images.
+SUPABASE_STORAGE_BUCKET="obstacle-images"
+```
+
+Run database migrations:
+
+```bash
+npm run db:migrate
+```
+
+If you have existing files in `public/uploads`, migrate them to Supabase Storage:
+
+```bash
+npm run storage:migrate-local
+```
+
 First, run the development server:
 
 ```bash

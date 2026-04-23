@@ -1,17 +1,16 @@
-import { sqliteTable, text, integer, primaryKey } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
+import { integer, pgTable, primaryKey, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { randomUUID } from "crypto";
 
-export const users = sqliteTable("user", {
+export const users = pgTable("user", {
   id: text("id").primaryKey().$defaultFn(() => randomUUID()),
   name: text("name"),
   email: text("email").notNull(),
-  emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   role: text("role").notNull().default("builder"), // 'admin' | 'builder'
 });
 
-export const accounts = sqliteTable(
+export const accounts = pgTable(
   "account",
   {
     userId: text("user_id").notNull(),
@@ -31,18 +30,18 @@ export const accounts = sqliteTable(
   })
 );
 
-export const sessions = sqliteTable("session", {
+export const sessions = pgTable("session", {
   sessionToken: text("session_token").primaryKey(),
   userId: text("user_id").notNull(),
-  expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
 });
 
-export const verificationTokens = sqliteTable(
+export const verificationTokens = pgTable(
   "verificationToken",
   {
     identifier: text("identifier").notNull(),
     token: text("token").notNull(),
-    expires: integer("expires", { mode: "timestamp_ms" }).notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.identifier, t.token] }),
@@ -50,22 +49,22 @@ export const verificationTokens = sqliteTable(
 );
 
 // Obstacles tracked for the obstacle run build
-export const obstacles = sqliteTable("obstacles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const obstacles = pgTable("obstacles", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
   problemDescription: text("problem_description"),
   status: text("status").notNull().default("planned"), // planned | in_progress | problem | done
   order: integer("order"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
 });
 
-export const obstacleImages = sqliteTable("obstacle_images", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const obstacleImages = pgTable("obstacle_images", {
+  id: serial("id").primaryKey(),
   obstacleId: integer("obstacle_id").notNull(),
   url: text("url").notNull(),
   label: text("label"),
   uploadedBy: text("uploaded_by"),
-  createdAt: integer("created_at", { mode: "timestamp_ms" }).$defaultFn(() => new Date()),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
 });

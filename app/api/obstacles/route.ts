@@ -3,20 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/auth";
 import db from "../../../db";
 import { obstacles } from "../../../db/schema";
-import { desc, eq } from "drizzle-orm";
-
-function ensureProblemDescriptionColumn() {
-  const sqlite = (db as any).$client;
-  const cols = sqlite.prepare("PRAGMA table_info('obstacles')").all() as Array<{ name: string }>;
-  const hasColumn = cols.some((c) => c.name === "problem_description");
-  if (!hasColumn) {
-    sqlite.prepare("ALTER TABLE obstacles ADD COLUMN problem_description text").run();
-  }
-}
 
 export async function GET(_req: NextRequest) {
   try {
-    ensureProblemDescriptionColumn();
     const rows = await db.select().from(obstacles).orderBy(obstacles.order, obstacles.id);
     return NextResponse.json(rows);
   } catch (err: any) {
@@ -26,7 +15,6 @@ export async function GET(_req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    ensureProblemDescriptionColumn();
     const session = await getServerSession(authOptions);
     const role = (session?.user as any)?.role;
     if (!session || role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
