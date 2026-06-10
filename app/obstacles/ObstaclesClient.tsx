@@ -66,6 +66,10 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   const [reordering, setReordering] = useState(false);
   const [adminFilter, setAdminFilter] = useState<AdminFilter>(initialAdminFilter);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusTarget, setStatusTarget] = useState<{ id: number; name: string; problemDescription: string | null } | null>(null);
+  const [sStatus, setSStatus] = useState("planned");
+  const [sProblemDescription, setSProblemDescription] = useState("");
+  const [sSubmitting, setSSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -397,37 +401,17 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                 {o.status !== "done" && (
                   <button
                     className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700"
-                    onClick={async () => {
-                      const next =
-                        o.status === "planned"
-                          ? "in_progress"
-                          : o.status === "in_progress"
-                            ? "done"
-                            : o.status === "problem"
-                              ? "in_progress"
-                              : "planned";
-                      try {
-                        await onUpdate(o.id, { status: next });
-                      } catch (e: any) {
-                        setError(e.message ?? "Bijwerken mislukt");
-                      }
+                    onClick={() => {
+                      setStatusTarget({
+                        id: o.id,
+                        name: o.name,
+                        problemDescription: o.problemDescription,
+                      });
+                      setSStatus(o.status);
+                      setSProblemDescription(o.problemDescription ?? "");
                     }}
                   >
-                    Volgende status
-                  </button>
-                )}
-                {o.status === "in_progress" && (
-                  <button
-                    className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700"
-                    onClick={async () => {
-                      try {
-                        await onUpdate(o.id, { status: "problem" });
-                      } catch (e: any) {
-                        setError(e.message ?? "Bijwerken mislukt");
-                      }
-                    }}
-                  >
-                    Probleem
+                    Status
                   </button>
                 )}
                 {role === "admin" && (
@@ -748,6 +732,81 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                   </>
                 )}
               </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Status Dialog */}
+      {statusTarget && (
+        <div className="fixed inset-0 z-[65] flex items-end sm:items-center justify-center p-2 sm:p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => (sSubmitting ? null : setStatusTarget(null))} />
+          <form
+            onSubmit={async (ev) => {
+              ev.preventDefault();
+              setSSubmitting(true);
+              try {
+                await onUpdate(statusTarget.id, {
+                  status: sStatus,
+                  problemDescription: sStatus === "problem" ? sProblemDescription.trim() || null : null,
+                });
+                setStatusTarget(null);
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : "Status bijwerken mislukt");
+              } finally {
+                setSSubmitting(false);
+              }
+            }}
+            className="relative z-10 w-full max-w-md rounded-t-xl sm:rounded bg-white p-4 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Obstacle status aanpassen"
+          >
+            <h3 className="text-lg font-semibold mb-2">Status aanpassen</h3>
+            <p className="text-sm text-zinc-600 dark:text-zinc-300 mb-4">
+              Kies de status voor <strong>{statusTarget.name}</strong>.
+            </p>
+            <label className="text-sm" htmlFor="status-dialog-status">Status</label>
+            <select
+              id="status-dialog-status"
+              className="mt-1 mb-3 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white w-full"
+              value={sStatus}
+              onChange={(e) => setSStatus(e.target.value)}
+            >
+              {statuses.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+            {sStatus === "problem" && (
+              <>
+                <label className="text-sm" htmlFor="status-dialog-problem">Probleembeschrijving</label>
+                <textarea
+                  id="status-dialog-problem"
+                  className="mt-1 mb-3 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
+                  value={sProblemDescription}
+                  onChange={(e) => setSProblemDescription(e.target.value)}
+                  placeholder="Beschrijf het probleem..."
+                />
+              </>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                className="px-3 py-2 rounded border"
+                disabled={sSubmitting}
+                onClick={() => setStatusTarget(null)}
+              >
+                Annuleren
+              </button>
+              <button
+                type="submit"
+                disabled={sSubmitting}
+                className="px-3 py-2 rounded bg-black text-white disabled:opacity-60 dark:bg-white dark:text-black"
+              >
+                {sSubmitting ? "Opslaan..." : "Opslaan"}
+              </button>
             </div>
           </form>
         </div>
