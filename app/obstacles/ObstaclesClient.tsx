@@ -65,6 +65,7 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   const [dropIndicator, setDropIndicator] = useState<{ targetId: number; position: "before" | "after" } | null>(null);
   const [reordering, setReordering] = useState(false);
   const [adminFilter, setAdminFilter] = useState<AdminFilter>(initialAdminFilter);
+  const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -90,11 +91,13 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   }, [items]);
 
   const visibleItems = useMemo(() => {
-    if (adminFilter !== "all") {
-      return sorted.filter((o) => o.status === adminFilter);
-    }
-    return sorted;
-  }, [sorted, adminFilter]);
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    return sorted.filter((o) => {
+      const matchesStatus = adminFilter === "all" || o.status === adminFilter;
+      const matchesSearch = !normalizedSearch || o.name.toLowerCase().includes(normalizedSearch);
+      return matchesStatus && matchesSearch;
+    });
+  }, [sorted, adminFilter, searchQuery]);
 
   function getNextOrderValue() {
     const numericOrders = items.map((i) => i.order).filter((v): v is number => typeof v === "number");
@@ -270,19 +273,33 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
         </button>
         )}
       </div>
-      <div className="flex items-center gap-2">
-        <label className="text-sm">Filter</label>
-        <select
-          className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
-          value={adminFilter}
-          onChange={(e) => setAdminFilter(e.target.value as AdminFilter)}
-        >
-          <option value="all">Alles</option>
-          <option value="planned">Gepland</option>
-          <option value="in_progress">Aan het opbouwen</option>
-          <option value="problem">Probleem</option>
-          <option value="done">Klaar</option>
-        </select>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-col gap-1 sm:min-w-64">
+          <label className="text-sm" htmlFor="obstacle-search">Zoeken</label>
+          <input
+            id="obstacle-search"
+            type="search"
+            className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Zoek op naam..."
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm" htmlFor="obstacle-status-filter">Filter</label>
+          <select
+            id="obstacle-status-filter"
+            className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
+            value={adminFilter}
+            onChange={(e) => setAdminFilter(e.target.value as AdminFilter)}
+          >
+            <option value="all">Alles</option>
+            <option value="planned">Gepland</option>
+            <option value="in_progress">Aan het opbouwen</option>
+            <option value="problem">Probleem</option>
+            <option value="done">Klaar</option>
+          </select>
+        </div>
       </div>
       {role === "admin" && (
         <p className="text-xs text-zinc-500">Sleep via het handvat (`⋮⋮`) om de volgorde te wijzigen.</p>
@@ -456,7 +473,10 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
             )}
           </li>
         ))}
-        {visibleItems.length === 0 && (
+        {visibleItems.length === 0 && searchQuery.trim() && (
+          <li className="p-3 text-sm text-zinc-500">Geen Obstacle gevonden met deze zoekterm.</li>
+        )}
+        {visibleItems.length === 0 && !searchQuery.trim() && (
           <li className="p-3 text-sm text-zinc-500">Nog geen Obstacle. Voeg hierboven je eerste toe.</li>
         )}
       </ul>
