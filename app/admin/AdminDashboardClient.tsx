@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { statuses } from "../event-items/eventItemTypes";
 
-type Obstacle = {
+type EventItem = {
   id: number;
   status: string;
 };
-
-const statuses = [
-  { value: "planned", label: "Gepland" },
-  { value: "in_progress", label: "Aan het opbouwen" },
-  { value: "problem", label: "Probleem" },
-  { value: "done", label: "Klaar" },
-];
 
 const statusCardStyles: Record<string, string> = {
   planned: "border-slate-200 bg-slate-50 text-slate-900",
@@ -23,7 +17,7 @@ const statusCardStyles: Record<string, string> = {
 };
 
 export default function AdminDashboardClient() {
-  const [items, setItems] = useState<Obstacle[]>([]);
+  const [items, setItems] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +26,9 @@ export default function AdminDashboardClient() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/obstacles", { cache: "no-store" });
+        const res = await fetch("/api/event-items", { cache: "no-store" });
         if (!res.ok) throw new Error(`Laden mislukt (${res.status})`);
-        const data = (await res.json()) as Obstacle[];
+        const data = (await res.json()) as EventItem[];
         setItems(data);
       } catch (e) {
         const message = e instanceof Error ? e.message : "Dashboard laden mislukt";
@@ -66,7 +60,7 @@ export default function AdminDashboardClient() {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold">Admin dashboard</h2>
-            <p className="text-sm text-zinc-500">Overzicht van alle obstacle statussen.</p>
+            <p className="text-sm text-zinc-500">Overzicht van alle Obstacle-statussen.</p>
           </div>
           <div className="text-right">
             <div className="text-3xl font-semibold">{items.length}</div>

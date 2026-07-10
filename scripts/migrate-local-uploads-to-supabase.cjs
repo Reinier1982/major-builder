@@ -88,8 +88,8 @@ async function main() {
   await ensureBucket();
 
   const rows = await sql`
-    select "id", "obstacle_id", "url"
-    from "obstacle_images"
+    select "id", "event_item_id", "url"
+    from "event_item_images"
     where "url" like '/uploads/%'
     order by "id"
   `;
@@ -100,7 +100,7 @@ async function main() {
   for (const row of rows) {
     const fileName = path.basename(row.url);
     const localPath = path.join(uploadsDir, fileName);
-    const storagePath = `obstacles/${row.obstacle_id}/${fileName}`;
+    const storagePath = `event-items/${row.event_item_id}/${fileName}`;
 
     let file;
     try {
@@ -122,7 +122,7 @@ async function main() {
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
     await sql`
-      update "obstacle_images"
+      update "event_item_images"
       set "url" = ${data.publicUrl}
       where "id" = ${row.id}
     `;

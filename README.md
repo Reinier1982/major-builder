@@ -15,11 +15,33 @@ SUPABASE_URL="https://your-project-ref.supabase.co"
 SUPABASE_STORAGE_BUCKET="obstacle-images"
 ```
 
+Optional map defaults:
+
+```bash
+# Center the main map on your terrain by default.
+NEXT_PUBLIC_MAP_CENTER_LAT=52.1326
+NEXT_PUBLIC_MAP_CENTER_LNG=5.2913
+NEXT_PUBLIC_MAP_OVERVIEW_ZOOM=18
+
+# Edit dialogs use this zoom when placing a pin.
+NEXT_PUBLIC_MAP_ZOOM=18
+
+# Optional tile provider override. Defaults to OpenStreetMap.
+NEXT_PUBLIC_MAP_TILE_URL="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+NEXT_PUBLIC_MAP_ATTRIBUTION="&copy; OpenStreetMap contributors"
+```
+
 Run database migrations:
 
 ```bash
 npm run db:migrate
 ```
+
+Migration `0003_event_items` maakt de beheerde `event_item_types`-lijst en de
+generieke `event_items`- en `event_item_images`-tabellen. Bestaande obstakels en
+foto's worden met behoud van ids, status, volgorde, locatie en timestamps naar
+het standaardtype `obstacle` overgezet. De oude obstacle-API blijft als
+compatibiliteitslaag beschikbaar; nieuwe code gebruikt `/api/event-items`.
 
 If you have existing files in `public/uploads`, migrate them to Supabase Storage:
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export default function AdminMenuClient() {
+export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -30,17 +30,29 @@ export default function AdminMenuClient() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-44 rounded border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-lg p-2">
-            <div className="px-2 pb-2 text-xs text-zinc-500">Beheer</div>
+            <div className="px-2 pb-2 text-xs text-zinc-500">Menu</div>
             <div className="flex flex-col">
-              <Link href="/admin" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
-                Dashboard
-              </Link>
+              {isAdmin && (
+                <Link href="/admin" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
+                  Dashboard
+                </Link>
+              )}
               <Link href="/" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
                 Obstacles
               </Link>
-              <Link href="/users" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
-                Gebruikers
+              <Link href="/map" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
+                Plattegrond
               </Link>
+              {isAdmin && (
+                <Link href="/users" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
+                  Gebruikers
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href="/event-types" className="px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800" onClick={() => setOpen(false)}>
+                  Event Types
+                </Link>
+              )}
             </div>
           </div>
         </>

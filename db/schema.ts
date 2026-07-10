@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, doublePrecision, integer, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { randomUUID } from "crypto";
 
 export const users = pgTable("user", {
@@ -48,23 +48,43 @@ export const verificationTokens = pgTable(
   })
 );
 
-// Obstacles tracked for the obstacle run build
-export const obstacles = pgTable("obstacles", {
+// Managed categories shared by every kind of item shown at an event.
+export const eventItemTypes = pgTable("event_item_types", {
   id: serial("id").primaryKey(),
+  slug: text("slug").notNull(),
   name: text("name").notNull(),
   description: text("description"),
+  icon: text("icon").notNull().default("pin"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+}, (table) => ({
+  slugIdx: uniqueIndex("event_item_types_slug_idx").on(table.slug),
+}));
+
+export const eventItems = pgTable("event_items", {
+  id: serial("id").primaryKey(),
+  typeId: integer("type_id").notNull().references(() => eventItemTypes.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  comments: text("comments"),
+  // Retained as a compatibility field for the existing problem workflow.
   problemDescription: text("problem_description"),
   status: text("status").notNull().default("planned"), // planned | in_progress | problem | done
   order: integer("order"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow(),
+  locationX: integer("location_x"),
+  locationY: integer("location_y"),
+  locationLat: doublePrecision("location_lat"),
+  locationLng: doublePrecision("location_lng"),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
 });
 
-export const obstacleImages = pgTable("obstacle_images", {
+export const eventItemImages = pgTable("event_item_images", {
   id: serial("id").primaryKey(),
-  obstacleId: integer("obstacle_id").notNull(),
+  eventItemId: integer("event_item_id").notNull().references(() => eventItems.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   label: text("label"),
   uploadedBy: text("uploaded_by"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow(),
+  createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
 });

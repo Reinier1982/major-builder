@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import Providers from "./providers";
 
@@ -15,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Major Builder",
-  description: "Beheer van Obstacle voortgang",
+  description: "Beheer van Obstacles en evenementvoortgang",
 };
 
 export default function RootLayout({

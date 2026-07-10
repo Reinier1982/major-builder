@@ -2,41 +2,90 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import TerrainMap from "./TerrainMap";
+import {
+  eventItemIcon,
+  getEventItemLocation,
+  hasEventItemLocation,
+  statusLabelByValue,
+  statuses,
+  type EventItem,
+  type EventItemLocation,
+  type EventItemType,
+} from "./eventItemTypes";
 
-type Obstacle = {
+type EventItemImage = {
   id: number;
-  name: string;
-  description: string | null;
-  problemDescription: string | null;
-  status: string;
-  order: number | null;
-  createdAt: string | number | Date;
-  updatedAt: string | number | Date;
-};
-
-type ObstacleImage = {
-  id: number;
-  obstacleId: number;
+  eventItemId: number;
   url: string;
   label: string | null;
   uploadedBy: string | null;
 };
 
-const statuses = [
-  { value: "planned", label: "Gepland" },
-  { value: "in_progress", label: "Aan het opbouwen" },
-  { value: "problem", label: "Probleem" },
-  { value: "done", label: "Klaar" },
-];
+type SessionUser = {
+  id?: string;
+  role?: string;
+};
 
-const statusLabelByValue = Object.fromEntries(statuses.map((s) => [s.value, s.label])) as Record<string, string>;
 type AdminFilter = "all" | "planned" | "in_progress" | "problem" | "done";
 
-export default function ObstaclesClient({ initialAdminFilter = "all" }: { initialAdminFilter?: AdminFilter }) {
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function PhotoPicker({
+  id,
+  files,
+  onChange,
+  helperText,
+}: {
+  id: string;
+  files: File[];
+  onChange: (files: File[]) => void;
+  helperText: string;
+}) {
+  const selectionText = files.length === 0
+    ? "Nog geen foto's gekozen"
+    : `${files.length} foto${files.length === 1 ? "" : "'s"} geselecteerd`;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        id={id}
+        type="file"
+        multiple
+        accept="image/*"
+        className="sr-only"
+        aria-describedby={`${id}-help ${id}-selection`}
+        onChange={(event) => onChange(Array.from(event.target.files || []))}
+      />
+      <label
+        htmlFor={id}
+        className="flex min-h-20 w-full cursor-pointer items-center justify-center gap-3 rounded-lg border-2 border-dashed border-zinc-400 bg-zinc-50 px-4 py-5 text-center font-medium transition hover:border-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 dark:border-zinc-600 dark:bg-zinc-900 dark:hover:border-zinc-400 dark:hover:bg-zinc-800"
+      >
+        <span aria-hidden="true" className="text-xl">📷</span>
+        <span>{files.length === 0 ? "Foto's kiezen" : "Andere foto's kiezen"}</span>
+      </label>
+      <p id={`${id}-selection`} className={`text-center text-sm ${files.length > 0 ? "font-medium text-emerald-700 dark:text-emerald-400" : "text-zinc-500"}`} aria-live="polite">
+        {selectionText}
+      </p>
+      <p id={`${id}-help`} className="text-center text-xs text-zinc-500">{helperText}</p>
+    </div>
+  );
+}
+
+export default function EventItemsClient({
+  initialAdminFilter = "all",
+  initialTypeFilter = "all",
+}: {
+  initialAdminFilter?: AdminFilter;
+  initialTypeFilter?: string;
+}) {
   const { data: session } = useSession();
-  const role = (session?.user as any)?.role ?? "builder";
-  const userId = (session?.user as any)?.id ?? null;
-  const [items, setItems] = useState<Obstacle[]>([]);
+  const role = (session?.user as SessionUser | undefined)?.role ?? "builder";
+  const userId = (session?.user as SessionUser | undefined)?.id ?? null;
+  const [items, setItems] = useState<EventItem[]>([]);
+  const [types, setTypes] = useState<EventItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,8 +93,11 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   const [showCreate, setShowCreate] = useState(false);
   const [cName, setCName] = useState("");
   const [cDescription, setCDescription] = useState("");
+  const [cComments, setCComments] = useState("");
+  const [cTypeId, setCTypeId] = useState<number | "">("");
   const [cStatus, setCStatus] = useState("planned");
   const [cOrder, setCOrder] = useState<number | "">("");
+  const [cFiles, setCFiles] = useState<File[]>([]);
   const [cSubmitting, setCSubmitting] = useState(false);
 
   // edit dialog state
@@ -53,19 +105,28 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   const [eId, setEId] = useState<number | null>(null);
   const [eName, setEName] = useState("");
   const [eDescription, setEDescription] = useState("");
+  const [eComments, setEComments] = useState("");
+  const [eTypeId, setETypeId] = useState<number | "">("");
   const [eProblemDescription, setEProblemDescription] = useState("");
   const [eStatus, setEStatus] = useState("planned");
   const [eOrder, setEOrder] = useState<number | "">("");
+  const [eLocationLat, setELocationLat] = useState<number | null>(null);
+  const [eLocationLng, setELocationLng] = useState<number | null>(null);
   const [eSubmitting, setESubmitting] = useState(false);
-  const [eImages, setEImages] = useState<ObstacleImage[]>([]);
+  const [eImages, setEImages] = useState<EventItemImage[]>([]);
   const [eUploading, setEUploading] = useState(false);
   const [eNewFiles, setENewFiles] = useState<File[]>([]);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [locationDraft, setLocationDraft] = useState<EventItemLocation | null>(null);
+  const [locationSubmitting, setLocationSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [dropIndicator, setDropIndicator] = useState<{ targetId: number; position: "before" | "after" } | null>(null);
   const [reordering, setReordering] = useState(false);
   const [adminFilter, setAdminFilter] = useState<AdminFilter>(initialAdminFilter);
+  const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
   const [searchQuery, setSearchQuery] = useState("");
+  const [missingLocationOnly, setMissingLocationOnly] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ id: number; name: string; problemDescription: string | null } | null>(null);
   const [sStatus, setSStatus] = useState("planned");
   const [sProblemDescription, setSProblemDescription] = useState("");
@@ -76,6 +137,10 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
   useEffect(() => {
     setAdminFilter(initialAdminFilter);
   }, [initialAdminFilter]);
+
+  useEffect(() => {
+    setTypeFilter(initialTypeFilter);
+  }, [initialTypeFilter]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -98,10 +163,12 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
     const normalizedSearch = searchQuery.trim().toLowerCase();
     return sorted.filter((o) => {
       const matchesStatus = adminFilter === "all" || o.status === adminFilter;
+      const matchesType = typeFilter === "all" || o.type.slug === typeFilter;
       const matchesSearch = !normalizedSearch || o.name.toLowerCase().includes(normalizedSearch);
-      return matchesStatus && matchesSearch;
+      const matchesLocation = !missingLocationOnly || !hasEventItemLocation(o);
+      return matchesStatus && matchesType && matchesSearch && matchesLocation;
     });
-  }, [sorted, adminFilter, searchQuery]);
+  }, [sorted, adminFilter, typeFilter, searchQuery, missingLocationOnly]);
 
   function getNextOrderValue() {
     const numericOrders = items.map((i) => i.order).filter((v): v is number => typeof v === "number");
@@ -113,12 +180,18 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/obstacles", { cache: "no-store" });
-      if (!res.ok) throw new Error(`Laden mislukt (${res.status})`);
-      const data = await res.json();
+      const [itemsResponse, typesResponse] = await Promise.all([
+        fetch("/api/event-items", { cache: "no-store" }),
+        fetch("/api/event-item-types", { cache: "no-store" }),
+      ]);
+      if (!itemsResponse.ok || !typesResponse.ok) throw new Error(`Laden mislukt (${itemsResponse.status})`);
+      const data = await itemsResponse.json();
+      const loadedTypes = await typesResponse.json() as EventItemType[];
       setItems(data);
-    } catch (e: any) {
-      setError(e.message ?? "Obstacle laden mislukt");
+      setTypes(loadedTypes);
+      setCTypeId((current) => current || loadedTypes.find((type) => type.slug === "obstacle")?.id || loadedTypes[0]?.id || "");
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Obstacles laden mislukt"));
     } finally {
       setLoading(false);
     }
@@ -130,64 +203,65 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!cName.trim()) return;
+    if (!cName.trim() || cTypeId === "") return;
     setCSubmitting(true);
     try {
-      const res = await fetch("/api/obstacles", {
+      const res = await fetch("/api/event-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: cName.trim(),
+          typeId: cTypeId,
           description: cDescription.trim() || null,
+          comments: cComments.trim() || null,
           status: cStatus,
           order: cOrder === "" ? null : Number(cOrder),
         }),
       });
       if (!res.ok) throw new Error("Aanmaken mislukt");
-      const created = (await res.json()) as Obstacle;
+      const created = (await res.json()) as EventItem;
       setItems((prev) => [...prev, created]);
-      // upload images if selected
-      const input: any = document.getElementById("create-images");
-      const files: File[] = input?._files || [];
-      if (created?.id && files.length > 0) {
+      if (created?.id && cFiles.length > 0) {
         const fd = new FormData();
-        for (const f of files) fd.append("image", f);
-        const upRes = await fetch(`/api/obstacles/${created.id}/images`, { method: "POST", body: fd });
+        for (const f of cFiles) fd.append("image", f);
+        const upRes = await fetch(`/api/event-items/${created.id}/images`, { method: "POST", body: fd });
         if (!upRes.ok) throw new Error("Afbeelding uploaden mislukt");
       }
       // reset & close
       setShowCreate(false);
       setCName("");
       setCDescription("");
+      setCComments("");
       setCStatus("planned");
       setCOrder("");
-    } catch (e: any) {
-      setError(e.message ?? "Obstacle aanmaken mislukt");
+      setCFiles([]);
+    } catch (e: unknown) {
+      setError(getErrorMessage(e, "Obstacle aanmaken mislukt"));
     } finally {
       setCSubmitting(false);
     }
   }
 
-  async function onUpdate(id: number, patch: Partial<Obstacle>) {
-    const res = await fetch(`/api/obstacles/${id}`, {
+  async function onUpdate(id: number, patch: Partial<EventItem>) {
+    const res = await fetch(`/api/event-items/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
     if (!res.ok) throw new Error("Bijwerken mislukt");
-    const updated = (await res.json()) as Obstacle;
+    const updated = (await res.json()) as EventItem;
     setItems((prev) => prev.map((i) => (i.id === id ? updated : i)));
   }
 
-  async function fetchImages(obstacleId: number) {
-    const res = await fetch(`/api/obstacles/${obstacleId}/images`, { cache: "no-store" });
+  async function fetchImages(eventItemId: number) {
+    const res = await fetch(`/api/event-items/${eventItemId}/images`, { cache: "no-store" });
     if (!res.ok) throw new Error("Afbeeldingen laden mislukt");
-    const data = (await res.json()) as ObstacleImage[];
+    const data = (await res.json()) as EventItemImage[];
     setEImages(data);
   }
 
   async function onDelete(id: number) {
-    const res = await fetch(`/api/obstacles/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/event-items/${id}`, { method: "DELETE" });
     if (!res.ok) throw new Error("Verwijderen mislukt");
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
@@ -223,7 +297,7 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
     try {
       await Promise.all(
         updates.map(async (u) => {
-          const res = await fetch(`/api/obstacles/${u.id}`, {
+          const res = await fetch(`/api/event-items/${u.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ order: u.order }),
@@ -231,9 +305,9 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
           if (!res.ok) throw new Error("Volgorde opslaan mislukt");
         })
       );
-    } catch (e: any) {
+    } catch (e: unknown) {
       setItems(previousItems);
-      setError(e.message ?? "Volgorde opslaan mislukt");
+      setError(getErrorMessage(e, "Volgorde opslaan mislukt"));
     } finally {
       setReordering(false);
       setDraggingId(null);
@@ -246,42 +320,53 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
     clientY: number
   ): { targetId: number; position: "before" | "after" } | null {
     const el = document.elementFromPoint(clientX, clientY) as HTMLElement | null;
-    const row = el?.closest?.("[data-obstacle-id]") as HTMLElement | null;
+    const row = el?.closest?.("[data-event-item-id]") as HTMLElement | null;
     if (!row) return null;
-    const id = Number(row.dataset.obstacleId);
+    const id = Number(row.dataset.eventItemId);
     if (!Number.isFinite(id)) return null;
     const rect = row.getBoundingClientRect();
     const position = clientY < rect.top + rect.height / 2 ? "before" : "after";
     return { targetId: id, position };
   }
 
-  if (loading) return <p className="text-sm text-zinc-500">Obstacle laden...</p>;
+  const editLocation = getEventItemLocation({ locationLat: eLocationLat, locationLng: eLocationLng });
+  const locationContextItems = useMemo(() => {
+    return items.filter((item) => item.id !== eId && hasEventItemLocation(item));
+  }, [items, eId]);
+
+  if (loading) return <p className="text-sm text-zinc-500">Obstacles laden...</p>;
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
     <section className="flex flex-col gap-4 sm:gap-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-        <h2 className="text-xl font-semibold">Obstacle overzicht</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Obstacles</h2>
+          <p className="text-sm text-zinc-500">Alle onderdelen van het evenement in één overzicht.</p>
+        </div>
         {role === "admin" && (
         <button
           className="w-full sm:w-auto px-3 py-2 rounded bg-black text-white dark:bg-white dark:text-black"
           onClick={() => {
             setCName("");
             setCDescription("");
+            setCComments("");
+            setCTypeId(types.find((type) => type.slug === "obstacle")?.id ?? types[0]?.id ?? "");
             setCStatus("planned");
             setCOrder(getNextOrderValue());
+            setCFiles([]);
             setShowCreate(true);
           }}
         >
-          Nieuwe Obstacle
+          Nieuw
         </button>
         )}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-col gap-1 sm:min-w-64">
-          <label className="text-sm" htmlFor="obstacle-search">Zoeken</label>
+          <label className="text-sm" htmlFor="event-item-search">Zoeken</label>
           <input
-            id="obstacle-search"
+            id="event-item-search"
             type="search"
             className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
             value={searchQuery}
@@ -290,9 +375,21 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-sm" htmlFor="obstacle-status-filter">Filter</label>
+          <label className="text-sm" htmlFor="event-item-type-filter">Type</label>
           <select
-            id="obstacle-status-filter"
+            id="event-item-type-filter"
+            className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+          >
+            <option value="all">Alle typen</option>
+            {types.map((type) => <option key={type.id} value={type.slug}>{type.name}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-sm" htmlFor="event-item-status-filter">Status</label>
+          <select
+            id="event-item-status-filter"
             className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white text-sm"
             value={adminFilter}
             onChange={(e) => setAdminFilter(e.target.value as AdminFilter)}
@@ -304,6 +401,14 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
             <option value="done">Klaar</option>
           </select>
         </div>
+        <label className="inline-flex items-center gap-2 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-700">
+          <input
+            type="checkbox"
+            checked={missingLocationOnly}
+            onChange={(e) => setMissingLocationOnly(e.target.checked)}
+          />
+          Zonder locatie
+        </label>
       </div>
       {role === "admin" && (
         <p className="text-xs text-zinc-500">Sleep via het handvat (`⋮⋮`) om de volgorde te wijzigen.</p>
@@ -313,7 +418,8 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
         {visibleItems.map((o) => (
           <li
             key={o.id}
-            data-obstacle-id={o.id}
+            id={`event-item-${o.id}`}
+            data-event-item-id={o.id}
             className={`relative p-3 flex flex-col gap-2 touch-none ${draggingId === o.id ? "opacity-60" : ""}`}
             onDragEnd={() => {
               setDraggingId(null);
@@ -377,7 +483,17 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-zinc-500">#{o.order ?? "-"}</span>
+                <span className="inline-flex min-w-6 items-center justify-center rounded border border-zinc-300 px-1.5 py-0.5 text-xs dark:border-zinc-700" title={o.type.name}>
+                  {eventItemIcon(o.type.icon)}
+                </span>
                 <strong>{o.name}</strong>
+                <span
+                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs ${hasEventItemLocation(o) ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"}`}
+                  aria-label={hasEventItemLocation(o) ? "Locatie ingesteld" : "Geen locatie ingesteld"}
+                  title={hasEventItemLocation(o) ? "Locatie ingesteld" : "Geen locatie ingesteld"}
+                >
+                  {hasEventItemLocation(o) ? "⌖" : "○"}
+                </span>
                 <span className="text-xs px-2 py-0.5 rounded-full border border-zinc-300 dark:border-zinc-700">
                   {statusLabelByValue[o.status] ?? o.status}
                 </span>
@@ -389,9 +505,13 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                     setEId(o.id);
                     setEName(o.name);
                     setEDescription(o.description ?? "");
+                    setEComments(o.comments ?? "");
+                    setETypeId(o.typeId);
                     setEProblemDescription(o.problemDescription ?? "");
                     setEStatus(o.status);
                     setEOrder(o.order ?? "");
+                    setELocationLat(o.locationLat);
+                    setELocationLng(o.locationLng);
                     setShowEdit(true);
                     fetchImages(o.id).catch((e) => setError(e.message ?? "Afbeeldingen laden mislukt"));
                   }}
@@ -452,16 +572,17 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
               )}
             </div>
             {o.description && <p className="text-sm text-zinc-600 dark:text-zinc-300">{o.description}</p>}
+            {o.comments && <p className="text-sm text-zinc-500"><span className="font-medium">Opmerkingen:</span> {o.comments}</p>}
             {o.status === "problem" && o.problemDescription && (
               <p className="text-sm text-red-700 dark:text-red-300">{o.problemDescription}</p>
             )}
           </li>
         ))}
         {visibleItems.length === 0 && searchQuery.trim() && (
-          <li className="p-3 text-sm text-zinc-500">Geen Obstacle gevonden met deze zoekterm.</li>
+          <li className="p-3 text-sm text-zinc-500">Geen Obstacles gevonden met deze filters.</li>
         )}
         {visibleItems.length === 0 && !searchQuery.trim() && (
-          <li className="p-3 text-sm text-zinc-500">Nog geen Obstacle. Voeg hierboven je eerste toe.</li>
+          <li className="p-3 text-sm text-zinc-500">Nog geen Obstacles. Voeg hierboven je eerste toe.</li>
         )}
       </ul>
       {/* Create Dialog */}
@@ -474,7 +595,16 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
             role="dialog"
             aria-modal="true"
           >
-            <h3 className="text-lg font-semibold mb-3">Nieuwe Obstacle</h3>
+            <h3 className="text-lg font-semibold mb-3">Nieuw</h3>
+            <label className="text-sm">Type</label>
+            <select
+              className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-full"
+              value={cTypeId}
+              onChange={(e) => setCTypeId(Number(e.target.value))}
+              required
+            >
+              {types.filter((type) => type.active).map((type) => <option key={type.id} value={type.id}>{eventItemIcon(type.icon)} {type.name}</option>)}
+            </select>
             <label className="text-sm">Naam</label>
             <input
               className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
@@ -489,6 +619,13 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
               value={cDescription}
               onChange={(e) => setCDescription(e.target.value)}
               placeholder="Materialen, afmetingen, notities..."
+            />
+            <label className="text-sm">Opmerkingen</label>
+            <textarea
+              className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
+              value={cComments}
+              onChange={(e) => setCComments(e.target.value)}
+              placeholder="Algemene opmerkingen..."
             />
             <div className="flex flex-col sm:flex-row gap-3 mb-3">
               <div className="flex flex-col">
@@ -517,15 +654,19 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
               </div>
             </div>
             <div className="mb-3">
-              <label className="text-sm block mb-1">Afbeeldingen</label>
-              <input id="create-images" type="file" multiple accept="image/*" onChange={(ev) => {
-                const files = Array.from(ev.target.files || []);
-                // store on the element for later submit
-                (ev.target as any)._files = files;
-              }} />
+              <label className="text-sm font-medium block mb-2">Foto&apos;s</label>
+              <PhotoPicker
+                id="create-images"
+                files={cFiles}
+                onChange={setCFiles}
+                helperText="De geselecteerde foto's worden toegevoegd wanneer je op Aanmaken tikt."
+              />
             </div>
             <div className="flex justify-end gap-2">
-              <button type="button" className="px-3 py-2 rounded border" onClick={() => setShowCreate(false)}>
+              <button type="button" className="px-3 py-2 rounded border" onClick={() => {
+                setCFiles([]);
+                setShowCreate(false);
+              }}>
                 Annuleren
               </button>
               <button
@@ -553,8 +694,10 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                 const patch =
                   role === "admin"
                     ? {
+                        typeId: Number(eTypeId),
                         name: eName,
                         description: eDescription.trim() || null,
+                        comments: eComments.trim() || null,
                         problemDescription: eStatus === "problem" ? eProblemDescription.trim() || null : null,
                         status: eStatus,
                         order: eOrder === "" ? null : Number(eOrder),
@@ -565,8 +708,8 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                       };
                 await onUpdate(eId, patch);
                 setShowEdit(false);
-              } catch (e: any) {
-                setError(e.message ?? "Bijwerken mislukt");
+              } catch (e: unknown) {
+                setError(getErrorMessage(e, "Bijwerken mislukt"));
               } finally {
                 setESubmitting(false);
               }
@@ -576,6 +719,18 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
             aria-modal="true"
           >
             <h3 className="text-lg font-semibold mb-3">{role === "admin" ? "Obstacle bewerken" : "Obstacle status aanpassen"}</h3>
+            {role === "admin" && (
+              <>
+                <label className="text-sm">Type</label>
+                <select
+                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-full"
+                  value={eTypeId}
+                  onChange={(e) => setETypeId(Number(e.target.value))}
+                >
+                  {types.map((type) => <option key={type.id} value={type.id}>{eventItemIcon(type.icon)} {type.name}</option>)}
+                </select>
+              </>
+            )}
             <label className="text-sm">Naam</label>
             <input
               className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
@@ -591,6 +746,16 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
               onChange={(e) => setEDescription(e.target.value)}
               disabled={role !== "admin"}
             />
+            {role === "admin" && (
+              <>
+                <label className="text-sm">Opmerkingen</label>
+                <textarea
+                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
+                  value={eComments}
+                  onChange={(e) => setEComments(e.target.value)}
+                />
+              </>
+            )}
             <div className="flex flex-col sm:flex-row gap-3 mb-3">
               <div className="flex flex-col">
                 <label className="text-sm">Status</label>
@@ -629,6 +794,33 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                 />
               </>
             )}
+            <div className="my-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h4 className="font-medium">Locatie</h4>
+                  <p className="text-sm text-zinc-500">
+                    {editLocation ? "Pin ingesteld op de terreinplattegrond." : "Nog geen pin ingesteld."}
+                  </p>
+                </div>
+                {role === "admin" && (
+                  <button
+                    type="button"
+                    className="px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700"
+                    onClick={() => {
+                      setLocationDraft(editLocation);
+                      setShowLocationDialog(true);
+                    }}
+                  >
+                    Locatie instellen
+                  </button>
+                )}
+              </div>
+              {editLocation && (
+                <div className="mt-3">
+                  <TerrainMap eventItems={locationContextItems} editablePoint={editLocation} className="min-h-36" />
+                </div>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <button type="button" className="px-3 py-2 rounded border" onClick={() => setShowEdit(false)}>
                 Annuleren
@@ -662,11 +854,11 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                         title="Afbeelding verwijderen"
                         onClick={async () => {
                           try {
-                            const res = await fetch(`/api/obstacles/${eId}/images/${img.id}`, { method: "DELETE" });
+                            const res = await fetch(`/api/event-items/${eId}/images/${img.id}`, { method: "DELETE" });
                             if (!res.ok) throw new Error("Verwijderen mislukt");
                             setEImages((prev) => prev.filter((i) => i.id !== img.id));
-                          } catch (e: any) {
-                            setError(e.message ?? "Afbeelding verwijderen mislukt");
+                          } catch (e: unknown) {
+                            setError(getErrorMessage(e, "Afbeelding verwijderen mislukt"));
                           }
                         }}
                       >
@@ -681,59 +873,122 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
               <div className="flex flex-col items-center gap-2">
                 {(role === "admin" || role === "builder") && (
                   <>
-                    <input
+                    <PhotoPicker
                       id="edit-images"
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      className="sr-only"
-                      onChange={(ev) => {
-                        const files = Array.from(ev.target.files || []);
-                        setENewFiles(files);
-                      }}
+                      files={eNewFiles}
+                      onChange={setENewFiles}
+                      helperText="Kies één of meer foto's en tik daarna op Uploaden."
                     />
-                    <div className="flex flex-wrap justify-center items-center gap-2">
-                      <label
-                        htmlFor="edit-images"
-                        className="px-3 py-2 rounded border cursor-pointer select-none hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                      >
-                        Afbeeldingen kiezen
-                      </label>
+                    <div className="w-full">
                       <button
                         type="button"
                         disabled={eUploading || eNewFiles.length === 0}
-                        className="px-3 py-2 rounded border"
+                        className="min-h-12 w-full rounded-lg bg-black px-4 py-3 font-medium text-white disabled:cursor-not-allowed disabled:bg-zinc-200 disabled:text-zinc-500 dark:bg-white dark:text-black dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500"
                         onClick={async () => {
                           if (eId === null || eNewFiles.length === 0) return;
                           setEUploading(true);
                           try {
                             const fd = new FormData();
                             for (const f of eNewFiles) fd.append("image", f);
-                            const res = await fetch(`/api/obstacles/${eId}/images`, { method: "POST", body: fd });
+                            const res = await fetch(`/api/event-items/${eId}/images`, { method: "POST", body: fd });
                             if (!res.ok) throw new Error("Uploaden mislukt");
-                            const added = (await res.json()) as ObstacleImage[];
+                            const added = (await res.json()) as EventItemImage[];
                             setEImages((prev) => [...prev, ...added]);
                             setENewFiles([]);
                             const input = document.getElementById("edit-images") as HTMLInputElement | null;
                             if (input) input.value = "";
-                          } catch (e: any) {
-                            setError(e.message ?? "Afbeeldingen uploaden mislukt");
+                          } catch (e: unknown) {
+                            setError(getErrorMessage(e, "Afbeeldingen uploaden mislukt"));
                           } finally {
                             setEUploading(false);
                           }
                         }}
                       >
-                        {eUploading ? "Uploaden..." : "Afbeelding(en) uploaden"}
+                        {eUploading ? "Foto's uploaden..." : eNewFiles.length > 0 ? `${eNewFiles.length} foto${eNewFiles.length === 1 ? "" : "'s"} uploaden` : "Kies eerst foto's"}
                       </button>
                     </div>
-                    <span className="text-sm text-zinc-500 text-center">
-                      {eNewFiles.length > 0 ? `${eNewFiles.length} bestand${eNewFiles.length === 1 ? "" : "en"} geselecteerd` : "Geen bestanden geselecteerd"}
-                    </span>
                   </>
                 )}
               </div>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Location Dialog */}
+      {showLocationDialog && eId !== null && role === "admin" && (
+        <div className="fixed inset-0 z-[75] flex items-end sm:items-center justify-center p-2 sm:p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => (locationSubmitting ? null : setShowLocationDialog(false))} />
+          <div
+            className="relative z-10 w-full max-w-2xl rounded-t-xl sm:rounded bg-white p-4 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Obstacle locatie instellen"
+          >
+            <h3 className="text-lg font-semibold mb-2">Locatie instellen</h3>
+            <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-300">
+              Klik op de plattegrond of sleep de pin naar de juiste plek.
+            </p>
+            <TerrainMap
+              eventItems={locationContextItems}
+              editablePoint={locationDraft}
+              onEditablePointChange={setLocationDraft}
+            />
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              {editLocation && (
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded border border-red-300 text-red-700 disabled:opacity-60"
+                  disabled={locationSubmitting}
+                  onClick={async () => {
+                    setLocationSubmitting(true);
+                    try {
+                      await onUpdate(eId, { locationLat: null, locationLng: null });
+                      setELocationLat(null);
+                      setELocationLng(null);
+                      setLocationDraft(null);
+                      setShowLocationDialog(false);
+                    } catch (e: unknown) {
+                      setError(e instanceof Error ? e.message : "Locatie verwijderen mislukt");
+                    } finally {
+                      setLocationSubmitting(false);
+                    }
+                  }}
+                >
+                  Locatie verwijderen
+                </button>
+              )}
+              <button
+                type="button"
+                className="px-3 py-2 rounded border"
+                disabled={locationSubmitting}
+                onClick={() => setShowLocationDialog(false)}
+              >
+                Annuleren
+              </button>
+              <button
+                type="button"
+                disabled={locationSubmitting || !locationDraft}
+                className="px-3 py-2 rounded bg-black text-white disabled:opacity-60 dark:bg-white dark:text-black"
+                onClick={async () => {
+                  if (!locationDraft) return;
+                  setLocationSubmitting(true);
+                  try {
+                    await onUpdate(eId, { locationLat: locationDraft.lat, locationLng: locationDraft.lng });
+                    setELocationLat(locationDraft.lat);
+                    setELocationLng(locationDraft.lng);
+                    setShowLocationDialog(false);
+                  } catch (e: unknown) {
+                    setError(e instanceof Error ? e.message : "Locatie opslaan mislukt");
+                  } finally {
+                    setLocationSubmitting(false);
+                  }
+                }}
+              >
+                {locationSubmitting ? "Opslaan..." : "Locatie opslaan"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -844,8 +1099,8 @@ export default function ObstaclesClient({ initialAdminFilter = "all" }: { initia
                   try {
                     await onDelete(deleteTarget.id);
                     setDeleteTarget(null);
-                  } catch (e: any) {
-                    setError(e.message ?? "Verwijderen mislukt");
+                  } catch (e: unknown) {
+                    setError(getErrorMessage(e, "Verwijderen mislukt"));
                   } finally {
                     setDeleting(false);
                   }

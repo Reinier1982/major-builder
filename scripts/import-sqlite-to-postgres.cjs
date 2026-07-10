@@ -26,6 +26,18 @@ const toDate = (value) => {
 
 const rows = (table) => sqlite.prepare(`select * from "${table}"`).all();
 
+const optionalInteger = (row, key) => {
+  if (!(key in row) || row[key] === null || row[key] === undefined) return null;
+  const value = Number(row[key]);
+  return Number.isFinite(value) ? Math.round(value) : null;
+};
+
+const optionalNumber = (row, key) => {
+  if (!(key in row) || row[key] === null || row[key] === undefined) return null;
+  const value = Number(row[key]);
+  return Number.isFinite(value) ? value : null;
+};
+
 async function resetSequence(tx, table, column) {
   await tx`
     select setval(
@@ -127,25 +139,43 @@ async function main() {
       `;
     }
 
+    await tx`
+      insert into "event_item_types" ("slug", "name", "description", "icon")
+      values ('obstacle', 'Obstakel', 'Obstakels voor het evenement', 'obstacle')
+      on conflict ("slug") do nothing
+    `;
+
     for (const obstacle of data.obstacles) {
       await tx`
-        insert into "obstacles" (
+        insert into "event_items" (
           "id",
+          "type_id",
           "name",
           "description",
+          "comments",
           "problem_description",
           "status",
           "order",
+          "location_x",
+          "location_y",
+          "location_lat",
+          "location_lng",
           "created_at",
           "updated_at"
         )
         values (
           ${obstacle.id},
+          (select "id" from "event_item_types" where "slug" = 'obstacle'),
           ${obstacle.name},
           ${obstacle.description},
+          ${null},
           ${obstacle.problem_description},
           ${obstacle.status},
           ${obstacle.order},
+          ${optionalInteger(obstacle, "location_x")},
+          ${optionalInteger(obstacle, "location_y")},
+          ${optionalNumber(obstacle, "location_lat")},
+          ${optionalNumber(obstacle, "location_lng")},
           ${toDate(obstacle.created_at)},
           ${toDate(obstacle.updated_at)}
         )
@@ -155,6 +185,10 @@ async function main() {
           "problem_description" = excluded."problem_description",
           "status" = excluded."status",
           "order" = excluded."order",
+          "location_x" = excluded."location_x",
+          "location_y" = excluded."location_y",
+          "location_lat" = excluded."location_lat",
+          "location_lng" = excluded."location_lng",
           "created_at" = excluded."created_at",
           "updated_at" = excluded."updated_at"
       `;
@@ -162,7 +196,7 @@ async function main() {
 
     for (const image of data.obstacleImages) {
       await tx`
-        insert into "obstacle_images" ("id", "obstacle_id", "url", "label", "uploaded_by", "created_at")
+        insert into "event_item_images" ("id", "event_item_id", "url", "label", "uploaded_by", "created_at")
         values (
           ${image.id},
           ${image.obstacle_id},
@@ -172,7 +206,7 @@ async function main() {
           ${toDate(image.created_at)}
         )
         on conflict ("id") do update set
-          "obstacle_id" = excluded."obstacle_id",
+          "event_item_id" = excluded."event_item_id",
           "url" = excluded."url",
           "label" = excluded."label",
           "uploaded_by" = excluded."uploaded_by",
@@ -180,15 +214,15 @@ async function main() {
       `;
     }
 
-    await resetSequence(tx, "obstacles", "id");
-    await resetSequence(tx, "obstacle_images", "id");
+    await resetSequence(tx, "event_items", "id");
+    await resetSequence(tx, "event_item_images", "id");
   });
 
   console.log(`Imported ${data.users.length} user(s).`);
   console.log(`Imported ${data.sessions.length} session(s).`);
   console.log(`Imported ${data.verificationTokens.length} verification token(s).`);
-  console.log(`Imported ${data.obstacles.length} obstacle(s).`);
-  console.log(`Imported ${data.obstacleImages.length} obstacle image(s).`);
+  console.log(`Imported ${data.obstacles.length} obstacle EventItem(s).`);
+  console.log(`Imported ${data.obstacleImages.length} EventItem image(s).`);
 }
 
 main()
