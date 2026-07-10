@@ -25,7 +25,7 @@ export default function SignUpPage() {
       } else {
         setMessage(result?.error ?? "Er is iets misgegaan.");
       }
-    } catch (err) {
+    } catch {
       setMessage("Verzenden van e-mail mislukt.");
     } finally {
       setLoading(false);

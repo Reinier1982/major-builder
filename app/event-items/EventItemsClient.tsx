@@ -135,14 +135,6 @@ export default function EventItemsClient({
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setAdminFilter(initialAdminFilter);
-  }, [initialAdminFilter]);
-
-  useEffect(() => {
-    setTypeFilter(initialTypeFilter);
-  }, [initialTypeFilter]);
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setPreviewUrl(null);
     }
@@ -176,29 +168,24 @@ export default function EventItemsClient({
     return Math.max(...numericOrders) + 1;
   }
 
-  async function fetchItems() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [itemsResponse, typesResponse] = await Promise.all([
+  useEffect(() => {
+    let active = true;
+    Promise.all([
         fetch("/api/event-items", { cache: "no-store" }),
         fetch("/api/event-item-types", { cache: "no-store" }),
-      ]);
+      ])
+      .then(async ([itemsResponse, typesResponse]) => {
       if (!itemsResponse.ok || !typesResponse.ok) throw new Error(`Laden mislukt (${itemsResponse.status})`);
       const data = await itemsResponse.json();
       const loadedTypes = await typesResponse.json() as EventItemType[];
+      if (!active) return;
       setItems(data);
       setTypes(loadedTypes);
       setCTypeId((current) => current || loadedTypes.find((type) => type.slug === "obstacle")?.id || loadedTypes[0]?.id || "");
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Obstacles laden mislukt"));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    fetchItems();
+      })
+      .catch((cause: unknown) => { if (active) setError(getErrorMessage(cause, "Obstacles laden mislukt")); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
   async function onCreate(e: React.FormEvent) {

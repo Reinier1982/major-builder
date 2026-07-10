@@ -37,7 +37,11 @@ export default async function Home({ searchParams }: HomeProps) {
       <main className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-8">
         <div className="flex flex-col gap-4 sm:gap-6">
           <AdminMenu />
-          <EventItemsClient initialAdminFilter={initialAdminFilter} initialTypeFilter={params?.type?.trim() || "all"} />
+          <EventItemsClient
+            key={`${initialAdminFilter}:${params?.type?.trim() || "all"}`}
+            initialAdminFilter={initialAdminFilter}
+            initialTypeFilter={params?.type?.trim() || "all"}
+          />
         </div>
       </main>
     </div>

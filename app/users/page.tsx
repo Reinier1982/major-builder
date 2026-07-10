@@ -5,9 +5,11 @@ import Providers from "../providers";
 import AdminMenu from "../AdminMenu";
 import UsersClient from "./UsersClient";
 
+type SessionUser = { role?: string };
+
 export default async function UsersPage() {
   const session = await getServerSession(authOptions);
-  const role = (session?.user as any)?.role;
+  const role = (session?.user as SessionUser | undefined)?.role;
   if (!session || role !== "admin") redirect("/");
   return (
     <div className="min-h-screen bg-zinc-50 font-sans dark:bg-black">
