@@ -544,21 +544,21 @@ export default function EventItemsClient({
                     <strong className="truncate text-base tracking-tight">{o.name}</strong>
                     <span className="text-xs text-zinc-400">#{o.order ?? "-"}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                    <span>{o.type.name}</span>
-                    {role === "admin" && <><span aria-hidden="true">·</span><span>{o.assignedTo ? o.assignedTo.name || o.assignedTo.email : "Niet toegewezen"}</span></>}
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-[11px] text-zinc-500 sm:mt-1 sm:gap-2 sm:text-xs">
+                    <span className="shrink-0">{o.type.name}</span>
+                    {role === "admin" && <><span className="shrink-0" aria-hidden="true">·</span><span className="truncate">{o.assignedTo ? o.assignedTo.name || o.assignedTo.email : "Niet toegewezen"}</span></>}
                   </div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-1.5 sm:ml-auto sm:gap-2">
                 <span
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs ${hasEventItemLocation(o) ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"}`}
+                  className={`hidden h-6 w-6 items-center justify-center rounded-full border text-xs sm:inline-flex ${hasEventItemLocation(o) ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"}`}
                   aria-label={hasEventItemLocation(o) ? "Locatie ingesteld" : "Geen locatie ingesteld"}
                   title={hasEventItemLocation(o) ? "Locatie ingesteld" : "Geen locatie ingesteld"}
                 >
                   {hasEventItemLocation(o) ? "⌖" : "○"}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium dark:border-zinc-800 dark:bg-zinc-900">
+                <span className="inline-flex w-32 shrink-0 items-center justify-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 px-2 py-1 text-[11px] font-medium dark:border-zinc-800 dark:bg-zinc-900 sm:w-36 sm:gap-1.5 sm:px-2.5 sm:text-xs">
                   <span className={`h-2 w-2 rounded-full ${statusDotClassByValue[o.status] ?? statusDotClassByValue.planned}`} />
                   {statusLabelByValue[o.status] ?? o.status}
                 </span>
@@ -631,7 +631,7 @@ export default function EventItemsClient({
                   role="button"
                   aria-label="Sleep handvat"
                   title="Sleep om te herschikken"
-                  className="inline-flex h-10 touch-none cursor-grab select-none items-center justify-center self-end rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 sm:self-center"
+                  className="inline-flex h-10 w-10 shrink-0 touch-none cursor-grab select-none items-center justify-center justify-self-end self-end rounded-xl border border-zinc-200 bg-zinc-100 p-0 text-xs font-medium text-zinc-700 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 sm:w-auto sm:self-center sm:px-3"
                   draggable={!reordering}
                   onDragStart={(ev) => {
                     ev.dataTransfer.effectAllowed = "move";
