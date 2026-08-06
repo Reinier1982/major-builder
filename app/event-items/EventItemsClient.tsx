@@ -141,6 +141,8 @@ export default function EventItemsClient({
   const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
   const [searchQuery, setSearchQuery] = useState("");
   const [missingLocationOnly, setMissingLocationOnly] = useState(false);
+  const [eventOverviewExpanded, setEventOverviewExpanded] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ id: number; name: string; problemDescription: string | null } | null>(null);
   const [sStatus, setSStatus] = useState("planned");
   const [sProblemDescription, setSProblemDescription] = useState("");
@@ -356,18 +358,27 @@ export default function EventItemsClient({
   const locationContextItems = useMemo(() => {
     return items.filter((item) => item.id !== eId && hasEventItemLocation(item));
   }, [items, eId]);
+  const activeFilterCount = Number(searchQuery.trim().length > 0)
+    + Number(typeFilter !== "all")
+    + Number(adminFilter !== "all")
+    + Number(missingLocationOnly)
+    + Number(role === "admin" && assignedToMe);
 
   if (loading) return <div className="h-72 animate-pulse rounded-3xl bg-zinc-200 dark:bg-zinc-800" />;
   if (error) return <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</div>;
 
   return (
-    <section className="flex flex-col gap-5 sm:gap-6">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 p-6 text-white shadow-xl shadow-zinc-950/10 sm:p-8">
+    <section className="flex flex-col gap-3 sm:gap-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 p-4 text-white shadow-xl shadow-zinc-950/10 sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border border-white/10 bg-white/5" />
         <div className="pointer-events-none absolute -bottom-28 right-24 h-56 w-56 rounded-full border border-white/10" />
-        <div className="relative flex flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
+        <button type="button" className="relative flex w-full items-center justify-between text-left sm:hidden" aria-expanded={eventOverviewExpanded} onClick={() => setEventOverviewExpanded((expanded) => !expanded)}>
+          <span><span className="block text-sm font-semibold">Eventopbouw</span><span className="block text-xs text-zinc-400">{items.length} items</span></span>
+          <svg className={`h-5 w-5 text-zinc-400 transition-transform ${eventOverviewExpanded ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
+        </button>
+        <div className={`${eventOverviewExpanded ? "relative mt-5 flex" : "hidden"} flex-col gap-7 sm:relative sm:mt-0 sm:flex sm:flex-row sm:items-end sm:justify-between`}>
         <div className="max-w-xl">
-          <div className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">Eventopbouw</div>
+          <div className="mb-3 hidden text-xs font-medium uppercase tracking-[0.18em] text-zinc-400 sm:block">Eventopbouw</div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Alle items</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-300 sm:text-base">Plan, verdeel en volg ieder onderdeel van het evenement vanuit één overzicht.</p>
         </div>
@@ -390,14 +401,19 @@ export default function EventItemsClient({
         </button>
         )}
         </div>
-        <div className="relative mt-7 grid grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+        <div className={`${eventOverviewExpanded ? "relative mt-5 grid" : "hidden"} grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm sm:relative sm:mt-7 sm:grid`}>
           <div className="px-3 first:pl-0"><div className="text-2xl font-semibold">{items.length}</div><div className="text-xs text-zinc-300">Totaal</div></div>
           <div className="px-3"><div className="text-2xl font-semibold text-emerald-400">{statusCounts.done ?? 0}</div><div className="text-xs text-zinc-300">Afgerond</div></div>
           <div className="px-3"><div className={`text-2xl font-semibold ${(statusCounts.problem ?? 0) > 0 ? "text-rose-400" : "text-zinc-100"}`}>{statusCounts.problem ?? 0}</div><div className="text-xs text-zinc-300">Problemen</div></div>
         </div>
       </div>
       <div className="rounded-3xl border border-zinc-200/80 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80 sm:p-5">
-        <div className="mb-4"><h2 className="font-semibold tracking-tight">Filter items</h2><p className="text-xs text-zinc-500">Verfijn het overzicht op naam, type, status of eigenschappen.</p></div>
+        <button type="button" className="flex w-full items-center justify-between text-left sm:hidden" aria-expanded={filtersExpanded} onClick={() => setFiltersExpanded((expanded) => !expanded)}>
+          <span><span className="block text-sm font-semibold">Filter items</span><span className="block text-xs text-zinc-500">{activeFilterCount > 0 ? `${activeFilterCount} actief` : "Zoeken en filteren"}</span></span>
+          <svg className={`h-5 w-5 text-zinc-400 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
+        </button>
+        <div className="mb-4 hidden sm:block"><h2 className="font-semibold tracking-tight">Filter items</h2><p className="text-xs text-zinc-500">Verfijn het overzicht op naam, type, status of eigenschappen.</p></div>
+      <div className={`${filtersExpanded ? "mt-4 block" : "hidden"} sm:mt-0 sm:block`}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1fr)_auto_auto] lg:items-end">
         <div className="flex flex-col gap-1 sm:min-w-64">
           <label className="text-sm" htmlFor="event-item-search">Zoeken</label>
@@ -464,8 +480,9 @@ export default function EventItemsClient({
         )}
       </div>
       </div>
+      </div>
       {role === "admin" && (
-        <p className="px-1 text-xs text-zinc-500">Sleep via het handvat (`⋮⋮`) om de volgorde te wijzigen.</p>
+        <p className="hidden px-1 text-xs text-zinc-500 sm:block">Sleep via het handvat (`⋮⋮`) om de volgorde te wijzigen.</p>
       )}
 
       <ul className="flex flex-col gap-3">
