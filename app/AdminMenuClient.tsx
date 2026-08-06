@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type ThemePreference = "dark" | "light";
+
 export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
+  const [theme, setTheme] = useState<ThemePreference>(() => {
     if (typeof window === "undefined") return "dark";
     try {
       return localStorage.getItem("major-builder-theme") === "light" ? "light" : "dark";
@@ -14,13 +16,17 @@ export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
     }
   });
 
-  function changeTheme(nextTheme: "dark" | "light") {
+  function applyTheme(preference: ThemePreference) {
+    document.documentElement.dataset.theme = preference;
+    document.documentElement.style.colorScheme = preference;
+  }
+
+  function changeTheme(nextTheme: ThemePreference) {
     setTheme(nextTheme);
     try {
       localStorage.setItem("major-builder-theme", nextTheme);
     } catch {}
-    document.documentElement.dataset.theme = nextTheme;
-    document.documentElement.style.colorScheme = nextTheme;
+    applyTheme(nextTheme);
   }
 
   useEffect(() => {
@@ -72,18 +78,33 @@ export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
               )}
             </nav>
             <div className="mt-2 border-t border-zinc-200 px-2 pb-1 pt-3 dark:border-zinc-800">
-              <label htmlFor="theme-select" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">Weergave</label>
-              <div>
-                <select
-                  id="theme-select"
-                  suppressHydrationWarning
-                  value={theme}
-                  onChange={(event) => changeTheme(event.target.value as "dark" | "light")}
-                  className="min-h-10 w-full rounded-xl border border-zinc-200 bg-white py-2 pl-3 text-sm font-medium text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-zinc-800"
-                >
-                  <option value="dark">Donker</option>
-                  <option value="light">Licht</option>
-                </select>
+              <span className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">Weergave</span>
+              <div
+                role="radiogroup"
+                aria-label="Weergave kiezen"
+                className="relative grid h-11 w-full grid-cols-2 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-700 dark:bg-zinc-900"
+              >
+                <span
+                  className="absolute bottom-1 left-1 top-1 rounded-lg bg-white shadow-sm ring-1 ring-black/5 transition-transform duration-300 ease-out dark:bg-zinc-700 dark:ring-white/10"
+                  style={{
+                    width: "calc((100% - 0.5rem) / 2)",
+                    transform: `translateX(${theme === "light" ? 0 : 100}%)`,
+                  }}
+                  aria-hidden="true"
+                />
+                <button type="button" role="radio" aria-checked={theme === "light"} onClick={() => changeTheme("light")} className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium outline-none transition-colors focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${theme === "light" ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4" />
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+                  </svg>
+                  Licht
+                </button>
+                <button type="button" role="radio" aria-checked={theme === "dark"} onClick={() => changeTheme("dark")} className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium outline-none transition-colors focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${theme === "dark" ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.5 6.5 0 0 0 21 12.8Z" />
+                  </svg>
+                  Donker
+                </button>
               </div>
             </div>
           </div>
