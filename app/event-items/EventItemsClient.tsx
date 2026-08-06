@@ -695,7 +695,7 @@ export default function EventItemsClient({
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowCreate(false)} />
           <form
             onSubmit={onCreate}
-            className="relative z-10 w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-xl sm:rounded bg-white p-4 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+            className="relative z-10 max-h-[92dvh] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto rounded-t-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 sm:rounded"
             role="dialog"
             aria-modal="true"
           >
@@ -799,7 +799,7 @@ export default function EventItemsClient({
       {/* Edit Dialog */}
       {showEdit && eId !== null && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowEdit(false)} />
+          <div className="absolute inset-0 bg-black/50" onClick={() => (eSubmitting ? null : setShowEdit(false))} />
           <form
             onSubmit={async (ev) => {
               ev.preventDefault();
@@ -834,7 +834,31 @@ export default function EventItemsClient({
             role="dialog"
             aria-modal="true"
           >
-            <h3 className="text-lg font-semibold mb-3">{role === "admin" ? "Obstacle bewerken" : "Obstacle status aanpassen"}</h3>
+            <button
+              type="submit"
+              aria-label="Wijzigingen opslaan"
+              title="Opslaan"
+              disabled={eSubmitting}
+              className="absolute right-14 top-3 grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-400 hover:text-zinc-950 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 3h10l3 3v11H4Z" />
+                <path d="M7 3v5h7V3M7 17v-5h6v5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Modal sluiten"
+              title="Sluiten"
+              disabled={eSubmitting}
+              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-400 hover:text-zinc-950 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+              onClick={() => setShowEdit(false)}
+            >
+              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M5 5l10 10M15 5 5 15" />
+              </svg>
+            </button>
+            <h3 className="mb-3 pr-24 text-lg font-semibold">{role === "admin" ? "Obstacle bewerken" : "Obstacle status aanpassen"}</h3>
             {role === "admin" && (
               <>
                 <label className="text-sm">Type</label>
@@ -921,7 +945,7 @@ export default function EventItemsClient({
                 />
               </>
             )}
-            <div className="my-3 rounded border border-zinc-200 p-3 dark:border-zinc-800">
+            <div className="my-3 sm:rounded sm:border sm:border-zinc-200 sm:p-3 sm:dark:border-zinc-800">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h4 className="font-medium">Locatie</h4>
@@ -944,18 +968,18 @@ export default function EventItemsClient({
               </div>
               {editLocation && (
                 <div className="mt-3">
-                  <TerrainMap eventItems={locationContextItems} editablePoint={editLocation} className="min-h-36" />
+                  <TerrainMap eventItems={locationContextItems} editablePoint={editLocation} className="event-item-edit-map-preview" />
                 </div>
               )}
             </div>
-            <div className="flex justify-end gap-2">
-              <button type="button" className="px-3 py-2 rounded border" onClick={() => setShowEdit(false)}>
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:justify-end">
+              <button type="button" disabled={eSubmitting} className="min-h-11 w-full rounded-xl border px-3 py-2 font-medium disabled:opacity-50 sm:w-auto" onClick={() => setShowEdit(false)}>
                 Annuleren
               </button>
               <button
                 type="submit"
                 disabled={eSubmitting}
-                className="px-3 py-2 rounded bg-black text-white disabled:opacity-60 dark:bg-white dark:text-black"
+                className="min-h-11 w-full rounded-xl bg-black px-3 py-2 font-medium text-white disabled:opacity-60 dark:bg-white dark:text-black sm:w-auto"
               >
                 {eSubmitting ? "Opslaan..." : "Opslaan"}
               </button>
@@ -1047,7 +1071,7 @@ export default function EventItemsClient({
         <div className="fixed inset-0 z-[75] flex items-end sm:items-center justify-center p-2 sm:p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => (locationSubmitting ? null : setShowLocationDialog(false))} />
           <div
-            className="relative z-10 w-full max-w-2xl rounded-t-xl sm:rounded bg-white p-4 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+            className="relative z-10 max-h-[92dvh] w-full min-w-0 max-w-2xl overflow-x-hidden overflow-y-auto rounded-t-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 sm:rounded"
             role="dialog"
             aria-modal="true"
             aria-label="Obstacle locatie instellen"
@@ -1060,6 +1084,7 @@ export default function EventItemsClient({
               eventItems={locationContextItems}
               editablePoint={locationDraft}
               onEditablePointChange={setLocationDraft}
+              className="event-item-location-map"
             />
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               {editLocation && (

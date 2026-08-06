@@ -64,6 +64,45 @@ select {
   color: #71717a;
 }
 
+.event-item-edit-map-preview {
+  aspect-ratio: 16 / 9 !important;
+  display: block;
+  height: auto !important;
+  margin-left: -1rem;
+  min-height: 0 !important;
+  max-width: none;
+  width: calc(100% + 2rem);
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.event-item-location-map {
+  aspect-ratio: 16 / 9 !important;
+  display: block;
+  height: auto !important;
+  margin-left: -1rem;
+  max-height: min(40dvh, 18rem);
+  min-height: 0 !important;
+  max-width: none;
+  width: calc(100% + 2rem);
+  overflow: hidden;
+  border-radius: 0;
+}
+
+@media (min-width: 640px) {
+  .event-item-edit-map-preview,
+  .event-item-location-map {
+    aspect-ratio: 5 / 3 !important;
+    height: auto !important;
+    margin-left: 0;
+    max-height: none;
+    max-width: 100%;
+    min-height: 16rem !important;
+    width: 100%;
+    border-radius: 0.75rem;
+  }
+}
+
 ::selection {
   background: #18181b;
   color: #ffffff;

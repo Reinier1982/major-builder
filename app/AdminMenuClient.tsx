@@ -99,7 +99,7 @@ export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
                   </svg>
                   Licht
                 </button>
-                <button type="button" role="radio" aria-checked={theme === "dark"} onClick={() => changeTheme("dark")} className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg text-xs font-medium outline-none transition-colors focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${theme === "dark" ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
+                <button type="button" role="radio" aria-checked={theme === "dark"} onClick={() => changeTheme("dark")} className={`relative z-10 inline-flex items-center justify-center gap-1.5 rounded-lg pl-2 text-xs font-medium outline-none transition-colors focus:ring-2 focus:ring-zinc-300 dark:focus:ring-zinc-600 ${theme === "dark" ? "text-zinc-950 dark:text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
                   <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.5 6.5 0 0 0 21 12.8Z" />
                   </svg>
