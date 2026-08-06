@@ -622,7 +622,13 @@ export default function EventItemsClient({
                     setDeleteTarget({ id: o.id, name: o.name });
                   }}
                 >
-                  <span className="text-lg leading-none">🗑</span>
+                  <svg className="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 7h16" />
+                    <path d="M9 7V4h6v3" />
+                    <path d="m6 7 1 13h10l1-13" />
+                    <path d="M10 11v5M14 11v5" />
+                  </svg>
+                  <span className="hidden text-lg leading-none dark:inline">🗑</span>
                 </button>
                 )}
               </div>
