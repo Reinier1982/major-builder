@@ -746,7 +746,7 @@ export default function EventItemsClient({
               <div className="flex flex-col">
                 <label className="text-sm">Status</label>
                 <select
-                  className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-900 text-white"
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                   value={cStatus}
                   onChange={(e) => setCStatus(e.target.value)}
                 >
@@ -839,7 +839,7 @@ export default function EventItemsClient({
               aria-label="Wijzigingen opslaan"
               title="Opslaan"
               disabled={eSubmitting}
-              className="absolute right-14 top-3 grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-400 hover:text-zinc-950 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+              className="absolute right-14 top-3 grid h-9 w-9 place-items-center rounded-full border border-black bg-black text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-50 dark:border-white dark:bg-white dark:text-black dark:hover:bg-zinc-200"
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 3h10l3 3v11H4Z" />
@@ -851,7 +851,7 @@ export default function EventItemsClient({
               aria-label="Modal sluiten"
               title="Sluiten"
               disabled={eSubmitting}
-              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-zinc-200 bg-white text-zinc-600 shadow-sm transition hover:border-zinc-400 hover:text-zinc-950 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white"
+              className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full border border-zinc-300 bg-transparent text-zinc-900 shadow-sm transition hover:border-zinc-500 hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-white dark:hover:border-zinc-500 dark:hover:bg-zinc-800"
               onClick={() => setShowEdit(false)}
             >
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -911,7 +911,7 @@ export default function EventItemsClient({
               <div className="flex flex-col">
                 <label className="text-sm">Status</label>
                 <select
-                  className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-zinc-900 text-white"
+                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                   value={eStatus}
                   onChange={(e) => setEStatus(e.target.value)}
                 >
