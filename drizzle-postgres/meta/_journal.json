@@ -29,6 +29,13 @@
       "when": 1783712963998,
       "tag": "0003_event_items",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786043072834,
+      "tag": "0004_parched_thunderball",
+      "breakpoints": true
     }
   ]
 }

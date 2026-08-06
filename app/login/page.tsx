@@ -33,10 +33,17 @@ export default function SignInPage() {
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "40px auto", padding: 16 }}>
-      <h1 style={{ marginBottom: 12 }}>Inloggen</h1>
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 12 }}>
-        <label htmlFor="email">E-mailadres</label>
+    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top_left,_#d4d4d8_0,_#fafafa_42%,_#fafafa_100%)] p-4 dark:bg-[radial-gradient(circle_at_top_left,_#27272a_0,_#09090b_42%,_#09090b_100%)] sm:p-6">
+      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-zinc-200/80 bg-white/90 shadow-2xl shadow-zinc-950/10 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+        <div className="bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 p-6 text-white sm:p-8">
+          <Link href="/" className="mb-10 inline-flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-sm font-bold text-zinc-950">MB</span><span className="font-semibold">Major Builder</span></Link>
+          <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">Welkom terug</div>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">Inloggen</h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-300">Ontvang een veilige inloglink in je mailbox. Geen wachtwoord nodig.</p>
+        </div>
+        <div className="p-6 sm:p-8">
+      <form onSubmit={onSubmit} className="grid gap-4">
+        <label htmlFor="email" className="text-sm font-medium">E-mailadres</label>
         <input
           id="email"
           name="email"
@@ -44,24 +51,26 @@ export default function SignInPage() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@example.com"
-          style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+          placeholder="jij@voorbeeld.nl"
+          className="min-h-12 rounded-xl border border-zinc-300 bg-transparent px-4 py-3 outline-none transition placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-4 focus:ring-zinc-100 dark:border-zinc-700 dark:focus:ring-zinc-900"
         />
         <button
           type="submit"
           disabled={loading}
-          style={{ padding: 10, borderRadius: 6 }}
+          className="min-h-12 rounded-xl bg-zinc-950 px-4 py-3 font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-wait disabled:opacity-60 dark:bg-white dark:text-zinc-950"
         >
           {loading ? "Verzenden..." : "Inloglink versturen"}
         </button>
       </form>
-      <div style={{ marginTop: 12 }}>
-        <span style={{ marginRight: 8 }}>Nieuw hier?</span>
-        <Link href="/signup">Account aanmaken</Link>
+      <div className="mt-5 text-center text-sm text-zinc-500">
+        <span>Nieuw hier? </span>
+        <Link className="font-medium text-zinc-950 underline-offset-4 hover:underline dark:text-white" href="/signup">Account aanmaken</Link>
       </div>
       {message && (
-        <p style={{ marginTop: 12, color: "#444" }}>{message}</p>
+        <p className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">{message}</p>
       )}
+        </div>
+      </div>
     </main>
   );
 }

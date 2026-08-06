@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import db from "../../../../../db";
 import { eventItemImages } from "../../../../../db/schema";
 import { authOptions } from "../../../../../lib/auth";
-import { errorMessage, getEventItem } from "../../../../../lib/event-items";
+import { canAccessEventItem, errorMessage, getEventItem } from "../../../../../lib/event-items";
 import { ensureStorageBucket } from "../../../../../lib/supabase-storage";
 
 type SessionUser = { id?: string; role?: string };
@@ -15,6 +15,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const eventItemId = Number((await ctx.params).id);
   if (!Number.isInteger(eventItemId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {
+    const session = await getServerSession(authOptions);
+    const user = session?.user as SessionUser | undefined;
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!await canAccessEventItem(eventItemId, user ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(await db.select().from(eventItemImages).where(eq(eventItemImages.eventItemId, eventItemId)));
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error, "Failed to fetch images") }, { status: 500 });
@@ -28,6 +32,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const session = await getServerSession(authOptions);
     const user = session?.user as SessionUser | undefined;
     if (!session || (user?.role !== "admin" && user?.role !== "builder")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!await canAccessEventItem(eventItemId, user ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const item = await getEventItem(eventItemId);
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const form = await req.formData();

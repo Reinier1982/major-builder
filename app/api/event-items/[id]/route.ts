@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import type { InferInsertModel } from "drizzle-orm";
-import { eq } from "drizzle-orm";
+import { and, eq, type InferInsertModel } from "drizzle-orm";
 import db from "../../../../db";
-import { eventItems } from "../../../../db/schema";
+import { eventItems, users } from "../../../../db/schema";
 import { authOptions } from "../../../../lib/auth";
-import { allowedStatuses, errorMessage, getEventItem, getEventItemType, parseLatitude, parseLongitude, parseMapCoordinate } from "../../../../lib/event-items";
+import { allowedStatuses, canAccessEventItem, errorMessage, getEventItem, getEventItemType, parseLatitude, parseLongitude, parseMapCoordinate } from "../../../../lib/event-items";
 
-type SessionUser = { role?: string };
+type SessionUser = { id?: string; role?: string };
 type Patch = Partial<InferInsertModel<typeof eventItems>>;
-type PatchBody = Partial<Record<"typeId" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
+type PatchBody = Partial<Record<"typeId" | "assignedToId" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
 
 function parseId(value: string) {
   const id = Number(value);
@@ -20,6 +19,10 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const id = parseId((await ctx.params).id);
   if (!id) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const viewer = session.user as SessionUser | undefined;
+    if (!await canAccessEventItem(id, viewer ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const item = await getEventItem(id);
     return item ? NextResponse.json(item) : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
@@ -33,7 +36,9 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
   try {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const role = (session.user as SessionUser | undefined)?.role;
+    const viewer = session.user as SessionUser | undefined;
+    const role = viewer?.role;
+    if (!await canAccessEventItem(id, viewer ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const body = (await req.json()) as PatchBody;
     const patch: Patch = {};
     if (body.typeId !== undefined) {
@@ -41,6 +46,14 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });
       }
       patch.typeId = body.typeId;
+    }
+    if (body.assignedToId !== undefined) {
+      const assignedToId = body.assignedToId === null || body.assignedToId === "" ? null : String(body.assignedToId);
+      if (assignedToId) {
+        const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId)).limit(1);
+        if (!assignee) return NextResponse.json({ error: "Invalid assignee" }, { status: 400 });
+      }
+      patch.assignedToId = assignedToId;
     }
     if (body.name !== undefined) {
       const name = String(body.name).trim();
@@ -77,7 +90,10 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       if (Object.keys(patch).some((key) => !builderFields.has(key))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     patch.updatedAt = new Date();
-    const [updated] = await db.update(eventItems).set(patch).where(eq(eventItems.id, id)).returning({ id: eventItems.id });
+    const updateCondition = role === "admin"
+      ? eq(eventItems.id, id)
+      : and(eq(eventItems.id, id), eq(eventItems.assignedToId, viewer?.id ?? ""));
+    const [updated] = await db.update(eventItems).set(patch).where(updateCondition).returning({ id: eventItems.id });
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(await getEventItem(updated.id));
   } catch (error) {

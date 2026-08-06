@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import db from "../../../../../../db";
 import { eventItemImages } from "../../../../../../db/schema";
 import { authOptions } from "../../../../../../lib/auth";
-import { errorMessage } from "../../../../../../lib/event-items";
+import { canAccessEventItem, errorMessage } from "../../../../../../lib/event-items";
 import { getStorageBucketName, getStoragePathFromPublicUrl, getSupabaseStorageClient } from "../../../../../../lib/supabase-storage";
 
 type SessionUser = { id?: string; role?: string };
@@ -18,6 +18,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     const session = await getServerSession(authOptions);
     const user = session?.user as SessionUser | undefined;
     if (!session || (user?.role !== "admin" && user?.role !== "builder")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!await canAccessEventItem(eventItemId, user ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const [existing] = await db.select().from(eventItemImages).where(and(eq(eventItemImages.id, image), eq(eventItemImages.eventItemId, eventItemId))).limit(1);
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (user.role !== "admin" && existing.uploadedBy !== user.id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });

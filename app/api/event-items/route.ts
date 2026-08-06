@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import type { InferInsertModel } from "drizzle-orm";
+import { eq, type InferInsertModel } from "drizzle-orm";
 import db from "../../../db";
-import { eventItems } from "../../../db/schema";
+import { eventItems, users } from "../../../db/schema";
 import { authOptions } from "../../../lib/auth";
 import {
   allowedStatuses,
@@ -15,14 +15,17 @@ import {
   parseMapCoordinate,
 } from "../../../lib/event-items";
 
-type SessionUser = { role?: string };
+type SessionUser = { id?: string; role?: string };
 type EventItemInsert = InferInsertModel<typeof eventItems>;
-type CreateBody = Partial<Record<"typeId" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
+type CreateBody = Partial<Record<"typeId" | "assignedToId" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const viewer = session.user as SessionUser | undefined;
     const type = req.nextUrl.searchParams.get("type")?.trim() || undefined;
-    return NextResponse.json(await listEventItems(type));
+    return NextResponse.json(await listEventItems(type, viewer ?? {}));
   } catch (error) {
     return NextResponse.json({ error: errorMessage(error, "Failed to fetch event items") }, { status: 500 });
   }
@@ -43,6 +46,11 @@ export async function POST(req: NextRequest) {
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
     const status = String(body.status ?? "planned");
     if (!allowedStatuses.has(status)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    const assignedToId = body.assignedToId === null || body.assignedToId === undefined ? null : String(body.assignedToId);
+    if (assignedToId) {
+      const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId)).limit(1);
+      if (!assignee) return NextResponse.json({ error: "Invalid assignee" }, { status: 400 });
+    }
 
     const locationX = parseMapCoordinate(body.locationX, 10000);
     const locationY = parseMapCoordinate(body.locationY, 10000);
@@ -57,6 +65,7 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const data: EventItemInsert = {
       typeId,
+      assignedToId,
       name,
       description: body.description ? String(body.description) : null,
       comments: body.comments ? String(body.comments) : null,

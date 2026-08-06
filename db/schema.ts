@@ -1,4 +1,4 @@
-import { boolean, doublePrecision, integer, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, doublePrecision, index, integer, pgTable, primaryKey, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { randomUUID } from "crypto";
 
 export const users = pgTable("user", {
@@ -65,6 +65,7 @@ export const eventItemTypes = pgTable("event_item_types", {
 export const eventItems = pgTable("event_items", {
   id: serial("id").primaryKey(),
   typeId: integer("type_id").notNull().references(() => eventItemTypes.id),
+  assignedToId: text("assigned_to_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description"),
   comments: text("comments"),
@@ -78,7 +79,9 @@ export const eventItems = pgTable("event_items", {
   locationLng: doublePrecision("location_lng"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
-});
+}, (table) => ({
+  assignedToIdx: index("event_items_assigned_to_idx").on(table.assignedToId),
+}));
 
 export const eventItemImages = pgTable("event_item_images", {
   id: serial("id").primaryKey(),
