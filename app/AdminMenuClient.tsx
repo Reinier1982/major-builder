@@ -5,6 +5,23 @@ import { useEffect, useState } from "react";
 
 export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      return localStorage.getItem("major-builder-theme") === "light" ? "light" : "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
+  function changeTheme(nextTheme: "dark" | "light") {
+    setTheme(nextTheme);
+    try {
+      localStorage.setItem("major-builder-theme", nextTheme);
+    } catch {}
+    document.documentElement.dataset.theme = nextTheme;
+    document.documentElement.style.colorScheme = nextTheme;
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -54,6 +71,21 @@ export default function AdminMenuClient({ isAdmin }: { isAdmin: boolean }) {
                 </Link>
               )}
             </nav>
+            <div className="mt-2 border-t border-zinc-200 px-2 pb-1 pt-3 dark:border-zinc-800">
+              <label htmlFor="theme-select" className="mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">Weergave</label>
+              <div>
+                <select
+                  id="theme-select"
+                  suppressHydrationWarning
+                  value={theme}
+                  onChange={(event) => changeTheme(event.target.value as "dark" | "light")}
+                  className="min-h-10 w-full rounded-xl border border-zinc-200 bg-white py-2 pl-3 text-sm font-medium text-zinc-900 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-zinc-800"
+                >
+                  <option value="dark">Donker</option>
+                  <option value="light">Licht</option>
+                </select>
+              </div>
+            </div>
           </div>
         </>
       )}
