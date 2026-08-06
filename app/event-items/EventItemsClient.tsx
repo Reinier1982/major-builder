@@ -474,7 +474,7 @@ export default function EventItemsClient({
             key={o.id}
             id={`event-item-${o.id}`}
             data-event-item-id={o.id}
-            className={`group relative flex touch-none flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white/90 p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/80 dark:hover:border-zinc-700 sm:p-5 ${draggingId === o.id ? "opacity-60" : ""}`}
+            className={`group relative flex touch-pan-y flex-col gap-2 rounded-2xl border border-zinc-200/80 bg-white/90 p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/80 dark:hover:border-zinc-700 sm:gap-3 sm:p-5 ${draggingId === o.id ? "opacity-60" : ""}`}
             onDragEnd={() => {
               setDraggingId(null);
               setDropIndicator(null);
@@ -534,9 +534,9 @@ export default function EventItemsClient({
             {dropIndicator?.targetId === o.id && dropIndicator.position === "after" && (
               <div className="pointer-events-none absolute left-3 right-3 -bottom-px h-1 rounded-full bg-zinc-500" />
             )}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 sm:flex sm:flex-row sm:gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-base font-semibold dark:bg-zinc-800" title={o.type.name}>
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm font-semibold dark:bg-zinc-800 sm:h-11 sm:w-11 sm:rounded-xl sm:text-base" title={o.type.name}>
                   {eventItemIcon(o.type.icon)}
                 </span>
                 <div className="min-w-0">
@@ -550,7 +550,7 @@ export default function EventItemsClient({
                   </div>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+              <div className="flex flex-wrap items-center justify-end gap-1.5 sm:ml-auto sm:gap-2">
                 <span
                   className={`inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs ${hasEventItemLocation(o) ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "border-zinc-300 bg-zinc-50 text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900"}`}
                   aria-label={hasEventItemLocation(o) ? "Locatie ingesteld" : "Geen locatie ingesteld"}
@@ -563,9 +563,11 @@ export default function EventItemsClient({
                   {statusLabelByValue[o.status] ?? o.status}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="col-span-1 flex flex-wrap items-center gap-2 sm:col-auto">
                 <button
-                  className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+                  className="grid h-10 w-10 place-items-center rounded-xl border border-zinc-200 bg-white text-sm font-medium transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 sm:flex sm:w-auto sm:items-center sm:px-3 sm:py-2"
+                  aria-label="Obstacle bewerken"
+                  title="Obstacle bewerken"
                   onClick={() => {
                     setEId(o.id);
                     setEName(o.name);
@@ -582,11 +584,17 @@ export default function EventItemsClient({
                     fetchImages(o.id).catch((e) => setError(e.message ?? "Afbeeldingen laden mislukt"));
                   }}
                 >
-                  Bewerken
+                  <svg className="h-5 w-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+                  </svg>
+                  <span className="hidden sm:inline">Bewerken</span>
                 </button>
                 {o.status !== "done" && (
                   <button
-                    className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-medium transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600 dark:hover:bg-zinc-900"
+                    className="grid h-10 w-10 place-items-center rounded-xl border border-zinc-200 bg-white text-sm font-medium transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 sm:flex sm:w-auto sm:items-center sm:px-3 sm:py-2"
+                    aria-label="Status aanpassen"
+                    title="Status aanpassen"
                     onClick={() => {
                       setStatusTarget({
                         id: o.id,
@@ -597,7 +605,12 @@ export default function EventItemsClient({
                       setSProblemDescription(o.problemDescription ?? "");
                     }}
                   >
-                    Status
+                    <svg className="h-5 w-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+                      <circle cx="16" cy="7" r="2" />
+                      <circle cx="8" cy="17" r="2" />
+                    </svg>
+                    <span className="hidden sm:inline">Status</span>
                   </button>
                 )}
                 {role === "admin" && (
@@ -618,7 +631,7 @@ export default function EventItemsClient({
                   role="button"
                   aria-label="Sleep handvat"
                   title="Sleep om te herschikken"
-                  className="inline-flex h-10 cursor-grab select-none items-center self-end rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 sm:self-center"
+                  className="inline-flex h-10 touch-none cursor-grab select-none items-center justify-center self-end rounded-xl border border-zinc-200 bg-zinc-100 px-3 text-xs font-medium text-zinc-700 active:cursor-grabbing dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 sm:self-center"
                   draggable={!reordering}
                   onDragStart={(ev) => {
                     ev.dataTransfer.effectAllowed = "move";
@@ -637,8 +650,8 @@ export default function EventItemsClient({
                 </span>
               )}
             </div>
-            {o.description && <p className="text-sm text-zinc-600 dark:text-zinc-300">{o.description}</p>}
-            {o.comments && <p className="text-sm text-zinc-500"><span className="font-medium">Opmerkingen:</span> {o.comments}</p>}
+            {o.description && <p className="hidden text-sm text-zinc-600 dark:text-zinc-300 sm:block">{o.description}</p>}
+            {o.comments && <p className="line-clamp-1 text-xs text-zinc-500 sm:line-clamp-none sm:text-sm"><span className="font-medium">Opmerkingen:</span> {o.comments}</p>}
             {o.status === "problem" && o.problemDescription && (
               <p className="text-sm text-red-700 dark:text-red-300">{o.problemDescription}</p>
             )}
