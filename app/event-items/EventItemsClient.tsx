@@ -141,7 +141,7 @@ export default function EventItemsClient({
   const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
   const [searchQuery, setSearchQuery] = useState("");
   const [missingLocationOnly, setMissingLocationOnly] = useState(false);
-  const [eventOverviewExpanded, setEventOverviewExpanded] = useState(false);
+  const [eventOverviewExpanded, setEventOverviewExpanded] = useState(true);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ id: number; name: string; problemDescription: string | null } | null>(null);
   const [sStatus, setSStatus] = useState("planned");
@@ -372,13 +372,18 @@ export default function EventItemsClient({
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-800 p-4 text-white shadow-xl shadow-zinc-950/10 sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full border border-white/10 bg-white/5" />
         <div className="pointer-events-none absolute -bottom-28 right-24 h-56 w-56 rounded-full border border-white/10" />
-        <button type="button" className="relative flex w-full items-center justify-between text-left sm:hidden" aria-expanded={eventOverviewExpanded} onClick={() => setEventOverviewExpanded((expanded) => !expanded)}>
+        <button
+          type="button"
+          className="relative flex w-full items-center justify-between text-left"
+          aria-expanded={eventOverviewExpanded}
+          aria-controls="event-overview-content event-overview-stats"
+          onClick={() => setEventOverviewExpanded((expanded) => !expanded)}
+        >
           <span><span className="block text-sm font-semibold">Eventopbouw</span><span className="block text-xs text-zinc-400">{items.length} items</span></span>
           <svg className={`h-5 w-5 text-zinc-400 transition-transform ${eventOverviewExpanded ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
         </button>
-        <div className={`${eventOverviewExpanded ? "relative mt-5 flex" : "hidden"} flex-col gap-7 sm:relative sm:mt-0 sm:flex sm:flex-row sm:items-end sm:justify-between`}>
+        <div id="event-overview-content" className={`${eventOverviewExpanded ? "relative mt-5 flex" : "hidden"} flex-col gap-7 sm:flex-row sm:items-end sm:justify-between`}>
         <div className="max-w-xl">
-          <div className="mb-3 hidden text-xs font-medium uppercase tracking-[0.18em] text-zinc-400 sm:block">Eventopbouw</div>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Alle items</h1>
           <p className="mt-3 text-sm leading-6 text-zinc-300 sm:text-base">Plan, verdeel en volg ieder onderdeel van het evenement vanuit één overzicht.</p>
         </div>
@@ -401,19 +406,24 @@ export default function EventItemsClient({
         </button>
         )}
         </div>
-        <div className={`${eventOverviewExpanded ? "relative mt-5 grid" : "hidden"} grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm sm:relative sm:mt-7 sm:grid`}>
+        <div id="event-overview-stats" className={`${eventOverviewExpanded ? "relative mt-5 grid" : "hidden"} grid-cols-3 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm`}>
           <div className="px-3 first:pl-0"><div className="text-2xl font-semibold">{items.length}</div><div className="text-xs text-zinc-300">Totaal</div></div>
           <div className="px-3"><div className="text-2xl font-semibold text-emerald-400">{statusCounts.done ?? 0}</div><div className="text-xs text-zinc-300">Afgerond</div></div>
           <div className="px-3"><div className={`text-2xl font-semibold ${(statusCounts.problem ?? 0) > 0 ? "text-rose-400" : "text-zinc-100"}`}>{statusCounts.problem ?? 0}</div><div className="text-xs text-zinc-300">Problemen</div></div>
         </div>
       </div>
       <div className="rounded-3xl border border-zinc-200/80 bg-white/90 p-4 shadow-sm backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80 sm:p-5">
-        <button type="button" className="flex w-full items-center justify-between text-left sm:hidden" aria-expanded={filtersExpanded} onClick={() => setFiltersExpanded((expanded) => !expanded)}>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between text-left"
+          aria-expanded={filtersExpanded}
+          aria-controls="event-item-filters"
+          onClick={() => setFiltersExpanded((expanded) => !expanded)}
+        >
           <span><span className="block text-sm font-semibold">Filter items</span><span className="block text-xs text-zinc-500">{activeFilterCount > 0 ? `${activeFilterCount} actief` : "Zoeken en filteren"}</span></span>
           <svg className={`h-5 w-5 text-zinc-400 transition-transform ${filtersExpanded ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 8 4 4 4-4" /></svg>
         </button>
-        <div className="mb-4 hidden sm:block"><h2 className="font-semibold tracking-tight">Filter items</h2><p className="text-xs text-zinc-500">Verfijn het overzicht op naam, type, status of eigenschappen.</p></div>
-      <div className={`${filtersExpanded ? "mt-4 block" : "hidden"} sm:mt-0 sm:block`}>
+      <div id="event-item-filters" className={`${filtersExpanded ? "mt-4 block" : "hidden"}`}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(16rem,1fr)_auto_auto] lg:items-end">
         <div className="flex flex-col gap-1 sm:min-w-64">
           <label className="text-sm" htmlFor="event-item-search">Zoeken</label>
@@ -639,13 +649,9 @@ export default function EventItemsClient({
                     setDeleteTarget({ id: o.id, name: o.name });
                   }}
                 >
-                  <svg className="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M4 7h16" />
-                    <path d="M9 7V4h6v3" />
-                    <path d="m6 7 1 13h10l1-13" />
-                    <path d="M10 11v5M14 11v5" />
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M9 3a2 2 0 0 0-2 2v1H4.75a1 1 0 1 0 0 2h.54l.8 11.17A2 2 0 0 0 8.08 21h7.84a2 2 0 0 0 1.99-1.83L18.71 8h.54a1 1 0 1 0 0-2H17V5a2 2 0 0 0-2-2H9Zm0 3V5h6v1H9Zm.5 4a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Zm5 0a1 1 0 0 1 1 1v6a1 1 0 1 1-2 0v-6a1 1 0 0 1 1-1Z" />
                   </svg>
-                  <span className="hidden text-lg leading-none dark:inline">🗑</span>
                 </button>
                 )}
               </div>
@@ -673,7 +679,6 @@ export default function EventItemsClient({
                 </span>
               )}
             </div>
-            {o.description && <p className="hidden text-sm text-zinc-600 dark:text-zinc-300 sm:block">{o.description}</p>}
             {o.comments && <p className="line-clamp-1 text-xs text-zinc-500 sm:line-clamp-none sm:text-sm"><span className="font-medium">Opmerkingen:</span> {o.comments}</p>}
             {o.status === "problem" && o.problemDescription && (
               <p className="text-sm text-red-700 dark:text-red-300">{o.problemDescription}</p>
@@ -830,7 +835,7 @@ export default function EventItemsClient({
                 setESubmitting(false);
               }
             }}
-            className="relative z-10 w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-t-xl sm:rounded bg-white p-4 shadow-xl dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700"
+            className="relative z-10 max-h-[92dvh] w-full min-w-0 max-w-4xl overflow-x-hidden overflow-y-auto rounded-t-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 sm:rounded sm:p-5 lg:p-6"
             role="dialog"
             aria-modal="true"
           >
@@ -858,60 +863,68 @@ export default function EventItemsClient({
                 <path d="M5 5l10 10M15 5 5 15" />
               </svg>
             </button>
-            <h3 className="mb-3 pr-24 text-lg font-semibold">{role === "admin" ? "Obstacle bewerken" : "Obstacle status aanpassen"}</h3>
-            {role === "admin" && (
-              <>
-                <label className="text-sm">Type</label>
-                <select
-                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-full"
-                  value={eTypeId}
-                  onChange={(e) => setETypeId(Number(e.target.value))}
-                >
-                  {types.map((type) => <option key={type.id} value={type.id}>{eventItemIcon(type.icon)} {type.name}</option>)}
-                </select>
-                <label className="text-sm">Bouwer</label>
-                <select
-                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-full"
-                  value={eAssignedToId}
-                  onChange={(e) => setEAssignedToId(e.target.value)}
-                >
-                  <option value="">Niet toegewezen</option>
-                  {assignableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>{user.name || user.email}</option>
-                  ))}
-                </select>
-              </>
-            )}
-            <label className="text-sm">Naam</label>
-            <input
-              className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
-              value={eName}
-              onChange={(e) => setEName(e.target.value)}
-              disabled={role !== "admin"}
-              required
-            />
-            <label className="text-sm">Beschrijving</label>
-            <textarea
-              className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
-              value={eDescription}
-              onChange={(e) => setEDescription(e.target.value)}
-              disabled={role !== "admin"}
-            />
-            {role === "admin" && (
-              <>
-                <label className="text-sm">Opmerkingen</label>
-                <textarea
-                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
-                  value={eComments}
-                  onChange={(e) => setEComments(e.target.value)}
+            <h3 className="mb-5 pr-24 text-lg font-semibold">{role === "admin" ? "Obstacle bewerken" : "Obstacle status aanpassen"}</h3>
+            <div className="grid grid-cols-1 gap-x-5 gap-y-4 md:grid-cols-2">
+              {role === "admin" && (
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm">Type</label>
+                  <select
+                    className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                    value={eTypeId}
+                    onChange={(e) => setETypeId(Number(e.target.value))}
+                  >
+                    {types.map((type) => <option key={type.id} value={type.id}>{eventItemIcon(type.icon)} {type.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {role === "admin" && (
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm">Bouwer</label>
+                  <select
+                    className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                    value={eAssignedToId}
+                    onChange={(e) => setEAssignedToId(e.target.value)}
+                  >
+                    <option value="">Niet toegewezen</option>
+                    {assignableUsers.map((user) => (
+                      <option key={user.id} value={user.id}>{user.name || user.email}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className="min-w-0 md:col-span-2">
+                <label className="mb-1 block text-sm">Naam</label>
+                <input
+                  className="w-full rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                  value={eName}
+                  onChange={(e) => setEName(e.target.value)}
+                  disabled={role !== "admin"}
+                  required
                 />
-              </>
-            )}
-            <div className="flex flex-col sm:flex-row gap-3 mb-3">
-              <div className="flex flex-col">
-                <label className="text-sm">Status</label>
+              </div>
+              <div className={`min-w-0 ${role === "admin" ? "" : "md:col-span-2"}`}>
+                <label className="mb-1 block text-sm">Beschrijving</label>
+                <textarea
+                  className="min-h-24 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                  value={eDescription}
+                  onChange={(e) => setEDescription(e.target.value)}
+                  disabled={role !== "admin"}
+                />
+              </div>
+              {role === "admin" && (
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm">Opmerkingen</label>
+                  <textarea
+                    className="min-h-24 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                    value={eComments}
+                    onChange={(e) => setEComments(e.target.value)}
+                  />
+                </div>
+              )}
+              <div className={`min-w-0 ${role === "admin" ? "" : "md:col-span-2"}`}>
+                <label className="mb-1 block text-sm">Status</label>
                 <select
-                  className="rounded border border-zinc-300 bg-white px-2 py-1 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                  className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
                   value={eStatus}
                   onChange={(e) => setEStatus(e.target.value)}
                 >
@@ -923,29 +936,29 @@ export default function EventItemsClient({
                 </select>
               </div>
               {role === "admin" && (
-                <div className="flex flex-col">
-                  <label className="text-sm">Volgorde</label>
+                <div className="min-w-0">
+                  <label className="mb-1 block text-sm">Volgorde</label>
                   <input
-                    className="px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-24"
+                    className="w-full rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
                     type="number"
                     value={eOrder}
                     onChange={(e) => setEOrder(e.target.value === "" ? "" : Number(e.target.value))}
                   />
                 </div>
               )}
+              {eStatus === "problem" && (
+                <div className="min-w-0 md:col-span-2">
+                  <label className="mb-1 block text-sm">Probleembeschrijving</label>
+                  <textarea
+                    className="min-h-24 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                    value={eProblemDescription}
+                    onChange={(e) => setEProblemDescription(e.target.value)}
+                    placeholder="Beschrijf het probleem..."
+                  />
+                </div>
+              )}
             </div>
-            {eStatus === "problem" && (
-              <>
-                <label className="text-sm">Probleembeschrijving</label>
-                <textarea
-                  className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
-                  value={eProblemDescription}
-                  onChange={(e) => setEProblemDescription(e.target.value)}
-                  placeholder="Beschrijf het probleem..."
-                />
-              </>
-            )}
-            <div className="my-3 sm:rounded sm:border sm:border-zinc-200 sm:p-3 sm:dark:border-zinc-800">
+            <div className="my-5 sm:rounded-xl sm:border sm:border-zinc-200 sm:p-4 sm:dark:border-zinc-800">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h4 className="font-medium">Locatie</h4>
