@@ -17,12 +17,12 @@ export type EventItem = {
   id: number;
   typeId: number;
   type: EventItemType;
-  assignedToId: string | null;
-  assignedTo: {
+  builderIds: string[];
+  builders: Array<{
     id: string;
     name: string | null;
     email: string;
-  } | null;
+  }>;
   name: string;
   description: string | null;
   comments: string | null;

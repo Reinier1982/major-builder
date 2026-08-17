@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import db from "../db";
-import { eventItems, eventItemTypes, users } from "../db/schema";
+import { eventItemBuilders, eventItems, eventItemTypes, users } from "../db/schema";
 
 export type EventItemViewer = { id?: string | null; role?: string | null };
 
@@ -10,9 +10,6 @@ export const allowedStatuses = new Set(["planned", "in_progress", "problem", "do
 const eventItemSelection = {
   id: eventItems.id,
   typeId: eventItems.typeId,
-  assignedToId: eventItems.assignedToId,
-  assignedToName: users.name,
-  assignedToEmail: users.email,
   name: eventItems.name,
   description: eventItems.description,
   comments: eventItems.comments,
@@ -34,10 +31,10 @@ const eventItemSelection = {
   typeUpdatedAt: eventItemTypes.updatedAt,
 };
 
-function shapeEventItem(row: Awaited<ReturnType<typeof selectEventItems>>[number]) {
+type EventItemRow = Awaited<ReturnType<typeof selectEventItems>>[number];
+
+function shapeEventItem(row: EventItemRow, builders: Array<{ id: string; name: string | null; email: string }>) {
   const {
-    assignedToName,
-    assignedToEmail,
     typeSlug,
     typeName,
     typeDescription,
@@ -49,11 +46,8 @@ function shapeEventItem(row: Awaited<ReturnType<typeof selectEventItems>>[number
   } = row;
   return {
     ...item,
-    assignedTo: item.assignedToId ? {
-      id: item.assignedToId,
-      name: assignedToName,
-      email: assignedToEmail ?? "",
-    } : null,
+    builderIds: builders.map((builder) => builder.id),
+    builders,
     type: {
       id: row.typeId,
       slug: typeSlug,
@@ -71,38 +65,65 @@ function selectEventItems() {
   return db
     .select(eventItemSelection)
     .from(eventItems)
-    .innerJoin(eventItemTypes, eq(eventItems.typeId, eventItemTypes.id))
-    .leftJoin(users, eq(eventItems.assignedToId, users.id));
+    .innerJoin(eventItemTypes, eq(eventItems.typeId, eventItemTypes.id));
+}
+
+async function shapeEventItems(rows: EventItemRow[]) {
+  if (rows.length === 0) return [];
+  const assignments = await db
+    .select({
+      eventItemId: eventItemBuilders.eventItemId,
+      id: users.id,
+      name: users.name,
+      email: users.email,
+    })
+    .from(eventItemBuilders)
+    .innerJoin(users, eq(eventItemBuilders.userId, users.id))
+    .where(inArray(eventItemBuilders.eventItemId, rows.map((row) => row.id)))
+    .orderBy(asc(users.name), asc(users.email));
+  const buildersByItem = new Map<number, Array<{ id: string; name: string | null; email: string }>>();
+  for (const assignment of assignments) {
+    const builders = buildersByItem.get(assignment.eventItemId) ?? [];
+    builders.push({ id: assignment.id, name: assignment.name, email: assignment.email });
+    buildersByItem.set(assignment.eventItemId, builders);
+  }
+  return rows.map((row) => shapeEventItem(row, buildersByItem.get(row.id) ?? []));
 }
 
 export async function listEventItems(typeSlug: string | undefined, viewer: EventItemViewer) {
-  const query = selectEventItems();
+  if (viewer.role !== "admin" && !viewer.id) return [];
+
   const conditions = [];
   if (typeSlug) conditions.push(eq(eventItemTypes.slug, typeSlug));
-  if (viewer.role !== "admin") {
-    if (!viewer.id) return [];
-    conditions.push(eq(eventItems.assignedToId, viewer.id));
-  }
+  if (viewer.role !== "admin") conditions.push(eq(eventItemBuilders.userId, viewer.id!));
+
+  const query = viewer.role === "admin"
+    ? selectEventItems()
+    : db.select(eventItemSelection).from(eventItems)
+      .innerJoin(eventItemTypes, eq(eventItems.typeId, eventItemTypes.id))
+      .innerJoin(eventItemBuilders, eq(eventItems.id, eventItemBuilders.eventItemId));
   const rows = conditions.length
     ? await query.where(and(...conditions)).orderBy(asc(eventItems.order), asc(eventItems.id))
     : await query.orderBy(asc(eventItems.order), asc(eventItems.id));
-  return rows.map(shapeEventItem);
+  return shapeEventItems(rows);
 }
 
 export async function getEventItem(id: number, typeSlug?: string) {
   const conditions = [eq(eventItems.id, id)];
   if (typeSlug) conditions.push(eq(eventItemTypes.slug, typeSlug));
   const rows = await selectEventItems().where(and(...conditions)).limit(1);
-  return rows[0] ? shapeEventItem(rows[0]) : null;
+  const shaped = await shapeEventItems(rows);
+  return shaped[0] ?? null;
 }
 
 export async function canAccessEventItem(id: number, viewer: EventItemViewer) {
   if (viewer.role === "admin") return Boolean(await getEventItem(id));
   if (!viewer.id) return false;
-  const rows = await db.select({ id: eventItems.id }).from(eventItems).where(and(
-    eq(eventItems.id, id),
-    eq(eventItems.assignedToId, viewer.id),
-  )).limit(1);
+  const rows = await db.select({ id: eventItems.id })
+    .from(eventItems)
+    .innerJoin(eventItemBuilders, eq(eventItems.id, eventItemBuilders.eventItemId))
+    .where(and(eq(eventItems.id, id), eq(eventItemBuilders.userId, viewer.id)))
+    .limit(1);
   return rows.length > 0;
 }
 

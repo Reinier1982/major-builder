@@ -65,7 +65,6 @@ export const eventItemTypes = pgTable("event_item_types", {
 export const eventItems = pgTable("event_items", {
   id: serial("id").primaryKey(),
   typeId: integer("type_id").notNull().references(() => eventItemTypes.id),
-  assignedToId: text("assigned_to_id").references(() => users.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description"),
   comments: text("comments"),
@@ -79,8 +78,14 @@ export const eventItems = pgTable("event_items", {
   locationLng: doublePrecision("location_lng"),
   createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+});
+
+export const eventItemBuilders = pgTable("event_item_builders", {
+  eventItemId: integer("event_item_id").notNull().references(() => eventItems.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
 }, (table) => ({
-  assignedToIdx: index("event_items_assigned_to_idx").on(table.assignedToId),
+  pk: primaryKey({ columns: [table.eventItemId, table.userId] }),
+  userIdx: index("event_item_builders_user_idx").on(table.userId),
 }));
 
 export const eventItemImages = pgTable("event_item_images", {

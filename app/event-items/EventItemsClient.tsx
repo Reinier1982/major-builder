@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import TerrainMap from "./TerrainMap";
 import {
@@ -36,6 +36,8 @@ type AssignableUser = {
 };
 
 type AdminFilter = "all" | "planned" | "in_progress" | "problem" | "done";
+
+const ITEMS_PER_PAGE = 25;
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -82,6 +84,134 @@ function PhotoPicker({
   );
 }
 
+function BuilderPicker({
+  users,
+  selectedIds,
+  onChange,
+}: {
+  users: AssignableUser[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const labelId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setSearchQuery("");
+      }
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setSearchQuery("");
+      }
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  function toggle(id: string) {
+    onChange(selectedIds.includes(id)
+      ? selectedIds.filter((selectedId) => selectedId !== id)
+      : [...selectedIds, id]);
+  }
+
+  const selectedNames = users
+    .filter((user) => selectedIds.includes(user.id))
+    .map((user) => user.name || user.email);
+  const selectionLabel = selectedNames.length === 0
+    ? "Niet toegewezen"
+    : selectedNames.length <= 2
+      ? selectedNames.join(", ")
+      : `${selectedNames.slice(0, 2).join(", ")} +${selectedNames.length - 2}`;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredUsers = normalizedSearch
+    ? users.filter((user) => `${user.name ?? ""} ${user.email}`.toLowerCase().includes(normalizedSearch))
+    : users;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="mb-1 block text-sm" id={labelId}>Bouwers</label>
+      <button
+        type="button"
+        className="flex min-h-10 w-full items-center justify-between gap-3 rounded border border-zinc-300 bg-white px-3 py-2 text-left text-sm dark:border-zinc-700 dark:bg-zinc-900"
+        aria-labelledby={labelId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => {
+          if (open) setSearchQuery("");
+          setOpen(!open);
+        }}
+      >
+        <span className={`min-w-0 truncate ${selectedNames.length === 0 ? "text-zinc-500" : ""}`}>{selectionLabel}</span>
+        <svg className={`h-4 w-4 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <path d="m5 7.5 5 5 5-5" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          className="absolute z-30 mt-1 w-full rounded-lg border border-zinc-300 bg-white p-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+          role="group"
+          aria-labelledby={labelId}
+        >
+          {users.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-zinc-500">Geen gebruikers beschikbaar</p>
+          ) : (
+            <>
+              <div className="p-1">
+                <input
+                  type="search"
+                  className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:ring-zinc-800"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Zoek op naam of e-mail..."
+                  aria-label="Bouwers zoeken"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {filteredUsers.map((user) => (
+                  <label key={user.id} className="flex cursor-pointer items-center gap-2 rounded px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-zinc-900 dark:accent-zinc-100"
+                      checked={selectedIds.includes(user.id)}
+                      onChange={() => toggle(user.id)}
+                    />
+                    <span className="min-w-0 truncate">{user.name || user.email}</span>
+                  </label>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <p className="px-3 py-3 text-sm text-zinc-500">Geen bouwers gevonden</p>
+                )}
+              </div>
+            </>
+          )}
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              className="mt-1 w-full border-t border-zinc-200 px-3 py-2 text-left text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:border-zinc-700 dark:hover:text-white"
+              onClick={() => onChange([])}
+            >
+              Selectie wissen
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EventItemsClient({
   initialAdminFilter = "all",
   initialTypeFilter = "all",
@@ -106,7 +236,7 @@ export default function EventItemsClient({
   const [cDescription, setCDescription] = useState("");
   const [cComments, setCComments] = useState("");
   const [cTypeId, setCTypeId] = useState<number | "">("");
-  const [cAssignedToId, setCAssignedToId] = useState("");
+  const [cBuilderIds, setCBuilderIds] = useState<string[]>([]);
   const [cStatus, setCStatus] = useState("planned");
   const [cOrder, setCOrder] = useState<number | "">("");
   const [cFiles, setCFiles] = useState<File[]>([]);
@@ -119,7 +249,7 @@ export default function EventItemsClient({
   const [eDescription, setEDescription] = useState("");
   const [eComments, setEComments] = useState("");
   const [eTypeId, setETypeId] = useState<number | "">("");
-  const [eAssignedToId, setEAssignedToId] = useState("");
+  const [eBuilderIds, setEBuilderIds] = useState<string[]>([]);
   const [eProblemDescription, setEProblemDescription] = useState("");
   const [eStatus, setEStatus] = useState("planned");
   const [eOrder, setEOrder] = useState<number | "">("");
@@ -141,6 +271,7 @@ export default function EventItemsClient({
   const [typeFilter, setTypeFilter] = useState(initialTypeFilter);
   const [searchQuery, setSearchQuery] = useState("");
   const [missingLocationOnly, setMissingLocationOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [eventOverviewExpanded, setEventOverviewExpanded] = useState(true);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [statusTarget, setStatusTarget] = useState<{ id: number; name: string; problemDescription: string | null } | null>(null);
@@ -180,10 +311,17 @@ export default function EventItemsClient({
       const matchesType = typeFilter === "all" || o.type.slug === typeFilter;
       const matchesSearch = !normalizedSearch || o.name.toLowerCase().includes(normalizedSearch);
       const matchesLocation = !missingLocationOnly || !hasEventItemLocation(o);
-      const matchesAssignee = !assignedToMe || o.assignedToId === userId;
+      const matchesAssignee = !assignedToMe || (userId !== null && o.builderIds.includes(userId));
       return matchesStatus && matchesType && matchesSearch && matchesLocation && matchesAssignee;
     });
   }, [sorted, adminFilter, typeFilter, searchQuery, missingLocationOnly, assignedToMe, userId]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleItems.length / ITEMS_PER_PAGE));
+  const activePage = Math.min(currentPage, totalPages);
+  const paginatedItems = useMemo(() => {
+    const pageStart = (activePage - 1) * ITEMS_PER_PAGE;
+    return visibleItems.slice(pageStart, pageStart + ITEMS_PER_PAGE);
+  }, [visibleItems, activePage]);
 
   function getNextOrderValue() {
     const numericOrders = items.map((i) => i.order).filter((v): v is number => typeof v === "number");
@@ -235,7 +373,7 @@ export default function EventItemsClient({
         body: JSON.stringify({
           name: cName.trim(),
           typeId: cTypeId,
-          assignedToId: cAssignedToId || null,
+          builderIds: cBuilderIds,
           description: cDescription.trim() || null,
           comments: cComments.trim() || null,
           status: cStatus,
@@ -257,7 +395,7 @@ export default function EventItemsClient({
       setCDescription("");
       setCComments("");
       setCStatus("planned");
-      setCAssignedToId("");
+      setCBuilderIds([]);
       setCOrder("");
       setCFiles([]);
     } catch (e: unknown) {
@@ -396,7 +534,7 @@ export default function EventItemsClient({
             setCComments("");
             setCTypeId(types.find((type) => type.slug === "obstacle")?.id ?? types[0]?.id ?? "");
             setCStatus("planned");
-            setCAssignedToId("");
+            setCBuilderIds([]);
             setCOrder(getNextOrderValue());
             setCFiles([]);
             setShowCreate(true);
@@ -432,7 +570,10 @@ export default function EventItemsClient({
             type="search"
             className="min-h-11 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-zinc-800"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Zoek op naam..."
           />
         </div>
@@ -442,7 +583,10 @@ export default function EventItemsClient({
             id="event-item-type-filter"
             className="min-h-11 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-zinc-800"
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) => {
+              setTypeFilter(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="all">Alle typen</option>
             {types.map((type) => <option key={type.id} value={type.slug}>{type.name}</option>)}
@@ -454,7 +598,10 @@ export default function EventItemsClient({
             id="event-item-status-filter"
             className="min-h-11 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:focus:ring-zinc-800"
             value={adminFilter}
-            onChange={(e) => setAdminFilter(e.target.value as AdminFilter)}
+            onChange={(e) => {
+              setAdminFilter(e.target.value as AdminFilter);
+              setCurrentPage(1);
+            }}
           >
             <option value="all">Alles</option>
             <option value="planned">Gepland</option>
@@ -471,7 +618,10 @@ export default function EventItemsClient({
             type="checkbox"
             className="h-4 w-4 accent-zinc-900 dark:accent-zinc-100"
             checked={missingLocationOnly}
-            onChange={(e) => setMissingLocationOnly(e.target.checked)}
+            onChange={(e) => {
+              setMissingLocationOnly(e.target.checked);
+              setCurrentPage(1);
+            }}
           />
           <span aria-hidden="true">⌖</span>
           Zonder locatie
@@ -482,7 +632,10 @@ export default function EventItemsClient({
               type="checkbox"
               className="h-4 w-4 accent-zinc-900 dark:accent-zinc-100"
               checked={assignedToMe}
-              onChange={(e) => setAssignedToMe(e.target.checked)}
+              onChange={(e) => {
+                setAssignedToMe(e.target.checked);
+                setCurrentPage(1);
+              }}
             />
             <span aria-hidden="true">●</span>
             Aan mij toegewezen
@@ -496,7 +649,7 @@ export default function EventItemsClient({
       )}
 
       <ul className="flex flex-col gap-3">
-        {visibleItems.map((o) => (
+        {paginatedItems.map((o) => (
           <li
             key={o.id}
             id={`event-item-${o.id}`}
@@ -573,7 +726,7 @@ export default function EventItemsClient({
                   </div>
                   <div className="mt-0.5 flex min-w-0 items-center gap-1 overflow-hidden whitespace-nowrap text-[11px] text-zinc-500 sm:mt-1 sm:gap-2 sm:text-xs">
                     <span className="shrink-0">{o.type.name}</span>
-                    {role === "admin" && <><span className="shrink-0" aria-hidden="true">·</span><span className="truncate">{o.assignedTo ? o.assignedTo.name || o.assignedTo.email : "Niet toegewezen"}</span></>}
+                    {role === "admin" && <><span className="shrink-0" aria-hidden="true">·</span><span className="truncate">{o.builders.length > 0 ? o.builders.map((builder) => builder.name || builder.email).join(", ") : "Niet toegewezen"}</span></>}
                   </div>
                 </div>
               </div>
@@ -601,7 +754,7 @@ export default function EventItemsClient({
                     setEDescription(o.description ?? "");
                     setEComments(o.comments ?? "");
                     setETypeId(o.typeId);
-                    setEAssignedToId(o.assignedToId ?? "");
+                    setEBuilderIds(o.builderIds);
                     setEProblemDescription(o.problemDescription ?? "");
                     setEStatus(o.status);
                     setEOrder(o.order ?? "");
@@ -694,6 +847,34 @@ export default function EventItemsClient({
           </li>
         )}
       </ul>
+      {visibleItems.length > ITEMS_PER_PAGE && (
+        <nav className="flex flex-col items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white/90 px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/80 sm:flex-row" aria-label="Paginering eventitems">
+          <p className="text-sm text-zinc-500">
+            {(activePage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(activePage * ITEMS_PER_PAGE, visibleItems.length)} van {visibleItems.length} items
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="min-h-10 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-medium transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
+              disabled={activePage === 1}
+              onClick={() => setCurrentPage(activePage - 1)}
+            >
+              Vorige
+            </button>
+            <span className="min-w-24 text-center text-sm" aria-live="polite">
+              Pagina {activePage} van {totalPages}
+            </span>
+            <button
+              type="button"
+              className="min-h-10 rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm font-medium transition hover:border-zinc-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:border-zinc-500"
+              disabled={activePage === totalPages}
+              onClick={() => setCurrentPage(activePage + 1)}
+            >
+              Volgende
+            </button>
+          </div>
+        </nav>
+      )}
       {/* Create Dialog */}
       {showCreate && role === "admin" && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4">
@@ -714,17 +895,9 @@ export default function EventItemsClient({
             >
               {types.filter((type) => type.active).map((type) => <option key={type.id} value={type.id}>{eventItemIcon(type.icon)} {type.name}</option>)}
             </select>
-            <label className="text-sm">Bouwer</label>
-            <select
-              className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 w-full"
-              value={cAssignedToId}
-              onChange={(e) => setCAssignedToId(e.target.value)}
-            >
-              <option value="">Niet toegewezen</option>
-              {assignableUsers.map((user) => (
-                <option key={user.id} value={user.id}>{user.name || user.email}</option>
-              ))}
-            </select>
+            <div className="mb-2">
+              <BuilderPicker users={assignableUsers} selectedIds={cBuilderIds} onChange={setCBuilderIds} />
+            </div>
             <label className="text-sm">Naam</label>
             <input
               className="mb-2 px-2 py-1 rounded border border-zinc-300 dark:border-zinc-700 bg-transparent w-full"
@@ -815,7 +988,7 @@ export default function EventItemsClient({
                   role === "admin"
                     ? {
                         typeId: Number(eTypeId),
-                        assignedToId: eAssignedToId || null,
+                        builderIds: eBuilderIds,
                         name: eName,
                         description: eDescription.trim() || null,
                         comments: eComments.trim() || null,
@@ -879,17 +1052,7 @@ export default function EventItemsClient({
               )}
               {role === "admin" && (
                 <div className="min-w-0">
-                  <label className="mb-1 block text-sm">Bouwer</label>
-                  <select
-                    className="w-full rounded border border-zinc-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                    value={eAssignedToId}
-                    onChange={(e) => setEAssignedToId(e.target.value)}
-                  >
-                    <option value="">Niet toegewezen</option>
-                    {assignableUsers.map((user) => (
-                      <option key={user.id} value={user.id}>{user.name || user.email}</option>
-                    ))}
-                  </select>
+                  <BuilderPicker users={assignableUsers} selectedIds={eBuilderIds} onChange={setEBuilderIds} />
                 </div>
               )}
               <div className="min-w-0 md:col-span-2">

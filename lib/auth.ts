@@ -15,6 +15,11 @@ type VerificationRequest = {
   provider: { from?: unknown };
 };
 
+function majorBuilderSender(sender: string) {
+  const address = sender.match(/<([^<>]+)>/)?.[1] ?? sender;
+  return `Major Builder <${address.trim()}>`;
+}
+
 function resendEmailProvider(): AuthProvider {
   const from = process.env.EMAIL_FROM ?? "";
   const maxAge = 24 * 60 * 60;
@@ -27,26 +32,24 @@ function resendEmailProvider(): AuthProvider {
       throw new Error("EMAIL_FROM is not set. Configure a verified sender in Resend and set EMAIL_FROM.");
     }
     const resend = new Resend(process.env.RESEND_API_KEY);
-    const { host } = new URL(url);
-    const escapedHost = host.replace(/\./g, "&#8203;.");
     const html = `
       <body style="background:#f9f9f9;margin:0;padding:24px;">
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="max-width:600px;margin:auto;background:#ffffff;border:1px solid #eaeaea;border-radius:6px;">
           <tr><td style="padding:24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#111;">
-            <h2 style="margin:0 0 12px 0;font-size:20px;">Sign in to ${escapedHost}</h2>
-            <p style="margin:0 0 16px 0;line-height:1.5;color:#444;">Click the button below to sign in.</p>
-            <p style="margin:0 0 16px 0;"><a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:10px 16px;border-radius:4px;text-decoration:none;font-weight:600">Sign in</a></p>
-            <p style="margin:16px 0 0 0;color:#666;">If the button doesn’t work, copy and paste this URL:</p>
+            <h2 style="margin:0 0 12px 0;font-size:20px;">Inloggen</h2>
+            <p style="margin:0 0 16px 0;line-height:1.5;color:#444;">Klik op de knop om in te loggen bij de Major Builder</p>
+            <p style="margin:0 0 16px 0;"><a href="${url}" style="display:inline-block;background:#000;color:#fff;padding:10px 16px;border-radius:4px;text-decoration:none;font-weight:600">Inloggen</a></p>
+            <p style="margin:16px 0 0 0;color:#666;">Werkt de knop niet? Kopieer en plak dan deze URL:</p>
             <p style="word-break:break-all;margin:8px 0 0 0;"><a href="${url}">${url}</a></p>
           </td></tr>
         </table>
       </body>`;
     const { error } = await resend.emails.send({
-      from: sender,
+      from: majorBuilderSender(sender),
       to: identifier,
-      subject: `Sign in to ${host}`,
+      subject: "Inloggen bij de Major Builder",
       html,
-      text: `Sign in to ${host}\n${url}\n`,
+      text: `Inloggen\n\nKlik op de knop om in te loggen bij de Major Builder\n\n${url}\n`,
     });
     if (error) throw new Error(error.message ?? "Failed to send verification email");
   };

@@ -7,7 +7,7 @@ import { statuses } from "../event-items/eventItemTypes";
 type EventItem = {
   id: number;
   status: string;
-  assignedToId: string | null;
+  builderIds: string[];
   locationLat: number | null;
   locationLng: number | null;
 };
@@ -71,7 +71,7 @@ export default function AdminDashboardClient() {
   const doneCount = statusCounts.done ?? 0;
   const problemCount = statusCounts.problem ?? 0;
   const completionPercentage = items.length > 0 ? Math.round((doneCount / items.length) * 100) : 0;
-  const assignedCount = items.filter((item) => Boolean(item.assignedToId)).length;
+  const assignedCount = items.filter((item) => item.builderIds.length > 0).length;
   const locatedCount = items.filter((item) => typeof item.locationLat === "number" && typeof item.locationLng === "number").length;
 
   if (loading) {
@@ -163,7 +163,7 @@ export default function AdminDashboardClient() {
             <div className="py-4 sm:px-4 sm:py-2 sm:first:pl-0">
               <div className="text-3xl font-semibold tracking-tight">{assignedCount}<span className="text-base font-normal text-zinc-400">/{items.length}</span></div>
               <div className="mt-1 text-sm font-medium">Toegewezen</div>
-              <div className="mt-1 text-xs text-zinc-500">Items met een bouwer</div>
+              <div className="mt-1 text-xs text-zinc-500">Items met een of meer bouwers</div>
             </div>
             <div className="py-4 sm:px-4 sm:py-2">
               <div className="text-3xl font-semibold tracking-tight">{locatedCount}<span className="text-base font-normal text-zinc-400">/{items.length}</span></div>

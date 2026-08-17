@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { and, eq, type InferInsertModel } from "drizzle-orm";
+import { eq, inArray, type InferInsertModel } from "drizzle-orm";
 import db from "../../../../db";
-import { eventItems, users } from "../../../../db/schema";
+import { eventItemBuilders, eventItems, users } from "../../../../db/schema";
 import { authOptions } from "../../../../lib/auth";
 import { allowedStatuses, canAccessEventItem, errorMessage, getEventItem, getEventItemType, parseLatitude, parseLongitude, parseMapCoordinate } from "../../../../lib/event-items";
 
 type SessionUser = { id?: string; role?: string };
 type Patch = Partial<InferInsertModel<typeof eventItems>>;
-type PatchBody = Partial<Record<"typeId" | "assignedToId" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
+type PatchBody = Partial<Record<"typeId" | "builderIds" | "name" | "description" | "comments" | "problemDescription" | "status" | "order" | "locationX" | "locationY" | "locationLat" | "locationLng", unknown>>;
 
 function parseId(value: string) {
   const id = Number(value);
@@ -41,19 +41,20 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (!await canAccessEventItem(id, viewer ?? {})) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const body = (await req.json()) as PatchBody;
     const patch: Patch = {};
+    let builderIds: string[] | undefined;
     if (body.typeId !== undefined) {
       if (typeof body.typeId !== "number" || !Number.isInteger(body.typeId) || !(await getEventItemType(body.typeId))) {
         return NextResponse.json({ error: "Invalid type" }, { status: 400 });
       }
       patch.typeId = body.typeId;
     }
-    if (body.assignedToId !== undefined) {
-      const assignedToId = body.assignedToId === null || body.assignedToId === "" ? null : String(body.assignedToId);
-      if (assignedToId) {
-        const [assignee] = await db.select({ id: users.id }).from(users).where(eq(users.id, assignedToId)).limit(1);
-        if (!assignee) return NextResponse.json({ error: "Invalid assignee" }, { status: 400 });
+    if (body.builderIds !== undefined) {
+      if (!Array.isArray(body.builderIds)) return NextResponse.json({ error: "Builder ids must be an array" }, { status: 400 });
+      builderIds = [...new Set(body.builderIds.map((builderId) => String(builderId).trim()).filter(Boolean))];
+      if (builderIds.length > 0) {
+        const builders = await db.select({ id: users.id }).from(users).where(inArray(users.id, builderIds));
+        if (builders.length !== builderIds.length) return NextResponse.json({ error: "Invalid builder" }, { status: 400 });
       }
-      patch.assignedToId = assignedToId;
     }
     if (body.name !== undefined) {
       const name = String(body.name).trim();
@@ -87,13 +88,19 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     }
     if (role !== "admin") {
       const builderFields = new Set(["status", "problemDescription"]);
-      if (Object.keys(patch).some((key) => !builderFields.has(key))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (builderIds !== undefined || Object.keys(patch).some((key) => !builderFields.has(key))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     patch.updatedAt = new Date();
-    const updateCondition = role === "admin"
-      ? eq(eventItems.id, id)
-      : and(eq(eventItems.id, id), eq(eventItems.assignedToId, viewer?.id ?? ""));
-    const [updated] = await db.update(eventItems).set(patch).where(updateCondition).returning({ id: eventItems.id });
+    const updated = await db.transaction(async (tx) => {
+      const [item] = await tx.update(eventItems).set(patch).where(eq(eventItems.id, id)).returning({ id: eventItems.id });
+      if (item && builderIds !== undefined) {
+        await tx.delete(eventItemBuilders).where(eq(eventItemBuilders.eventItemId, id));
+        if (builderIds.length > 0) {
+          await tx.insert(eventItemBuilders).values(builderIds.map((userId) => ({ eventItemId: id, userId })));
+        }
+      }
+      return item;
+    });
     if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json(await getEventItem(updated.id));
   } catch (error) {

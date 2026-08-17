@@ -42,8 +42,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const body = (await req.json()) as Record<string, unknown>;
     const patch: UserPatch = {};
-    if (body.name !== undefined) patch.name = body.name === null ? null : String(body.name);
-    if (body.role !== undefined) patch.role = String(body.role);
+    if (body.name !== undefined) {
+      const name = String(body.name ?? "").trim();
+      if (!name) return NextResponse.json({ error: "Naam is verplicht." }, { status: 400 });
+      patch.name = name;
+    }
+    if (body.role !== undefined) {
+      const nextRole = String(body.role);
+      if (nextRole !== "admin" && nextRole !== "builder") {
+        return NextResponse.json({ error: "Ongeldige rol." }, { status: 400 });
+      }
+      patch.role = nextRole;
+    }
 
     if (existing.role === "admin" && patch.role !== undefined && patch.role !== "admin") {
       const adminCount = await countAdmins();
