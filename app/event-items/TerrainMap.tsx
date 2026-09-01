@@ -9,7 +9,7 @@ import {
   tileLayerAttribution,
   tileLayerUrl,
 } from "./mapConfig";
-import { eventItemIcon, getEventItemLocation, statusColorByValue, statusLabelByValue, type EventItem, type EventItemLocation } from "./eventItemTypes";
+import { getEventItemLocation, statusColorByValue, statusLabelByValue, type EventItem, type EventItemLocation } from "./eventItemTypes";
 
 type TerrainMapProps = {
   eventItems?: EventItem[];
@@ -132,7 +132,7 @@ export default function TerrainMap({
       if (!location) continue;
       bounds.push([location.lat, location.lng]);
       const marker = L.marker([location.lat, location.lng], {
-        icon: markerIcon(L, statusColorByValue[item.status] ?? statusColorByValue.planned, eventItemIcon(item.type.icon)),
+        icon: markerIcon(L, statusColorByValue[item.status] ?? statusColorByValue.planned, String(item.order ?? "")),
         title: item.name,
       });
       const summary = item.description ? `<p style="margin:.25rem 0 0;color:#52525b;">${escapeHtml(item.description)}</p>` : "";

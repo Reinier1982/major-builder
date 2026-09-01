@@ -1065,20 +1065,20 @@ export default function EventItemsClient({
                   required
                 />
               </div>
-              <div className={`min-w-0 ${role === "admin" ? "" : "md:col-span-2"}`}>
+              <div className="min-w-0 md:col-span-2">
                 <label className="mb-1 block text-sm">Beschrijving</label>
                 <textarea
-                  className="min-h-24 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                  className="min-h-64 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700 md:min-h-32"
                   value={eDescription}
                   onChange={(e) => setEDescription(e.target.value)}
                   disabled={role !== "admin"}
                 />
               </div>
               {role === "admin" && (
-                <div className="min-w-0">
+                <div className="min-w-0 md:col-span-2">
                   <label className="mb-1 block text-sm">Opmerkingen</label>
                   <textarea
-                    className="min-h-24 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
+                    className="min-h-32 w-full resize-y rounded border border-zinc-300 bg-transparent px-3 py-2 dark:border-zinc-700"
                     value={eComments}
                     onChange={(e) => setEComments(e.target.value)}
                   />
